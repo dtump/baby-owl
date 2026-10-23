@@ -24,13 +24,14 @@ step, no assets, no network needed.
 |---|---|
 | `index.html` | SVG stage, gradient defs, UI overlay (buttons, hint), script tags |
 | `css/style.css` | Fullscreen stage, UI pill styling, cursor-idle behavior |
-| `js/scene.js` | Shared helpers (`svgEl`, `cubic`, easing), background: sky, sun, clouds, hills, ground, tree, pond, grass details, butterflies, leaves, sparkles |
+| `js/scene.js` | Shared helpers (`svgEl`, `cubic`, easing, `mixHex`), background: sky, sun, moon, stars, clouds, hills, ground, tree, pond, grass details, butterflies, leaves, sparkles, fireflies, rain/snow/rainbow; atmosphere clock (day/night, weather, seasons) |
 | `js/owls.js` | `Owl` class: body/wings/eyes/beak/feet built from SVG shapes; per-frame update (blink, gaze tracking, flap, hop, bob, sleepy lids); speech bubbles |
 | `js/stories.js` | Story context `S` (wait/skip, fly paths, splash, fish, zzz, hearts) + the 3 stories as async scripts |
 | `js/main.js` | Boot, rAF loop, mouse/keyboard/click input, story scheduler, WebAudio sound, fullscreen |
 
 SVG layer order (bottom → top): `bg` → `mid` (pond, tree) → `fg` (grass details)
-→ `owls` → `critters` → `fx` (bubbles, splashes, zzz) → vignette.
+→ `owls` → `critters` → `fx` (bubbles, splashes, zzz, rain/snow, huddle leaf)
+→ `tint` (day/night overlay) → vignette. `critters`, `fx` and `tint` are click-through.
 
 ## The cast
 
@@ -63,6 +64,32 @@ runner restores everyone to their home pose. Keys **1/2/3** jump to a story.
 Drifting clouds, rotating sun rays, birds, swaying grass/flowers/reeds, pond
 ripples, Lissajous-flying butterflies, occasional falling leaves, floating
 sparkles, random idle emotes (hops, wiggles, wing stretches, blinks).
+
+## Atmosphere (day/night, weather, seasons)
+
+The world lives on a clock: one full day/night cycle every 3 minutes
+(`Scene.dayMs`). `Scene.dayT` (0–1) drives everything:
+
+- **Sky** — gradient stops lerp between day → dusk → night → dawn palettes;
+  the sun arcs across the sky (hidden at night), a moon crosses at night,
+  stars twinkle, fireflies wander the meadow. Butterflies and sparkles fade
+  out after dark.
+- **Tint** — a full-stage rect (`#tint`, above `fx`, below the vignette)
+  warms the scene at dusk and darkens it at night.
+- **Sleep** — at night (`Scene.isNight()`) the owls stay home, eyes droop
+  shut, breathing deepens and `z`s float up; the story scheduler (`tryStart`)
+  waits out the night and re-checks every 8 s. Manual story keys still work —
+  the owls wake for the show. Idle emotes pause while asleep or huddled.
+- **Weather** — clear → rain (snow in winter) → rainbow (after rain) →
+  clear (`Scene.weather`, `nextWeather`). Rain streaks fall in the `fx`
+  layer and ripple the pond; a rainbow arcs behind the hills after the rain.
+  While it precipitates (and it's not night), the owls huddle together on
+  the branch under a big leaf and squint (`updateRest` in `main.js`).
+- **Seasons** — one in-world day per season (`Scene.seasonDays`), rotating
+  spring → summer → autumn → winter as `dayT` wraps (`Scene.dayCount`).
+  Canopy, hills and grass recolor per season; spring grows blossom and sheds
+  pink petals, autumn sheds many orange leaves, winter thins the canopy,
+  hides the berries and blankets the ground in snow.
 
 ## Interaction
 
