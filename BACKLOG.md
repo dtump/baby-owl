@@ -20,7 +20,7 @@
 - [ ] Click flowers → they bloom/pop; click mushrooms → they bounce.
 - [ ] Feed the owls: click to toss a berry/worm, nearest owl catches it.
 - [ ] Photo mode: hide UI, take a screenshot (canvas snapshot of the SVG).
-- [ ] Story picker UI (three little owl icons instead of keys 1/2/3).
+- [ ] Story picker UI (little owl icons instead of keys 1-8).
 - [ ] Shuffle story order; "story of the day" seeded by date.
 
 ## Critters & world

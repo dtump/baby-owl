@@ -77,6 +77,10 @@ async function main() {
   assert(document.getElementById('critters').getAttribute('pointer-events') === 'none', 'critters layer is click-through');
   assert(document.getElementById('fx').getAttribute('pointer-events') === 'none', 'fx layer is click-through');
 
+  // --- hint ---
+  const hintText = document.getElementById('hint').textContent;
+  assert(hintText.includes('1-8') && !hintText.includes('1/2/3'), 'hint shows the 1-8 story keys');
+
   // --- no fg props in front of the trunk (x 1150-1375, y > 640) ---
   const trunkZone = [];
   for (const g of document.querySelectorAll('#fg > g')) {
