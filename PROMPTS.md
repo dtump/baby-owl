@@ -26,3 +26,9 @@ Pick up the Atmosphere items from your backlog
 Minor visual fix needed: the wooden log is sitting on top of the mushroom.
 
 Then work on the "More stories" items in your backlog
+
+---
+
+## 2026-10-23 — Prompt 4
+
+Is the "1/2/3 = story" expected now that we have 8 stories, or will it cycle through them?
