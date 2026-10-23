@@ -168,6 +168,40 @@ async function main() {
   await sleep(120);
   T.clearNext();
 
+  // --- weather: rain, huddle under a leaf, rainbow ---
+  T.Scene.weather = 'rain';
+  T.Scene.weatherTimer = 999;
+  pump(120);
+  assert(+T.Scene.rainLayer.getAttribute('opacity') > .8, 'rain falls');
+  assert(T.Scene.rainDrops.length === 90, 'rain has drops');
+  assert(T.Scene.rainRipples.length > 0, 'rain ripples the pond');
+  pump(200);
+  assert(T.Scene.huddle > .9, 'owls huddle in the rain');
+  assert(pip.x > pip.home.x + 20, 'Pip moves toward Olive in the rain');
+  assert(+T.Scene.leafG.getAttribute('opacity') > .8, 'leaf umbrella over the huddle');
+  assert(olive.lid > .3 && pip.lid > .3, 'owls squint in the rain');
+  T.Scene.weather = 'clear';
+  T.Scene.weatherTimer = 999;
+  pump(60);
+  assert(+T.Scene.rainLayer.getAttribute('opacity') < .2, 'rain fades out');
+  pump(240);
+  assert(T.Scene.huddle < .1, 'owls stop huddling when the rain ends');
+  assert(Math.abs(pip.x - pip.home.x) < 2, 'Pip back home after the rain');
+  assert(olive.lid < .1, 'owls stop squinting');
+  T.Scene.weather = 'rain';
+  T.Scene.weatherTimer = .01;
+  pump(2);
+  assert(T.Scene.weather === 'rainbow', 'rainbow follows the rain');
+  pump(120);
+  assert(+T.Scene.rainbowG.getAttribute('opacity') > .8, 'rainbow appears after the rain');
+  T.Scene.weatherTimer = .01;
+  pump(2);
+  assert(T.Scene.weather === 'clear', 'rainbow ends into clear weather');
+  pump(120);
+  assert(+T.Scene.rainbowG.getAttribute('opacity') < .2, 'rainbow fades away');
+  T.Scene.weather = 'clear';
+  T.Scene.weatherTimer = 999;
+
   console.log(failures ? '\nSMOKE TEST FAILED (' + failures + ')' : '\nSMOKE TEST PASSED');
   process.exit(failures ? 1 : 0);
 }

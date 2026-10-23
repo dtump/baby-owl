@@ -49,6 +49,11 @@ const Scene = {
   dayMs: 180000,
   dayT: .15,
   night: 0,
+  weather: 'clear',
+  weatherTimer: 90,
+  rainFade: 0, snowFade: 0, rainbowFade: 0,
+  rainRipTimer: 0,
+  huddle: 0,
 
   build() {
     const bg = document.getElementById('bg');
@@ -96,6 +101,10 @@ const Scene = {
       svgEl('path', { d: 'M-30,620 C200,560 420,600 650,585 C900,568 1100,620 1350,590 C1450,578 1540,585 1630,580 L1630,900 L-30,900 Z', fill: '#8ccf63' }, this.hillsG)
     ];
 
+    this.rainbowG = svgEl('g', { opacity: 0 }, bg);
+    for (const [r, c] of [[335, '#ff8a80'], [317, '#ffcc80'], [299, '#fff59d'], [281, '#a5d6a7']])
+      svgEl('path', { d: `M${800 - r},655 A${r},${r} 0 0 1 ${800 + r},655`, fill: 'none', stroke: c, 'stroke-width': 15, 'stroke-linecap': 'round', opacity: .8 }, this.rainbowG);
+
     svgEl('path', { d: 'M0,662 C300,632 600,657 900,647 C1200,637 1400,657 1600,647 L1600,900 L0,900 Z', fill: 'url(#grass)' }, bg);
 
     this.skyStops = [...document.querySelectorAll('#sky stop')];
@@ -105,6 +114,30 @@ const Scene = {
     this.buildMid();
     this.buildFg();
     this.buildCritters();
+    this.buildWeather();
+  },
+
+  buildWeather() {
+    const fx = document.getElementById('fx');
+    this.rainLayer = svgEl('g', { opacity: 0 }, fx);
+    this.rainDrops = [];
+    for (let i = 0; i < 90; i++) {
+      const g = svgEl('line', { x1: 0, y1: 0, x2: -7, y2: 24, stroke: '#cfe6f5', 'stroke-width': 2.5, 'stroke-linecap': 'round', opacity: .55 }, this.rainLayer);
+      this.rainDrops.push({ g, x: rand(-100, 1700), y: rand(-900, 0), sp: rand(520, 760) });
+    }
+    this.snowLayer = svgEl('g', { opacity: 0 }, fx);
+    this.snowFlakes = [];
+    for (let i = 0; i < 70; i++) {
+      const g = svgEl('circle', { r: rand(2, 4.2), fill: '#ffffff', opacity: .85 }, this.snowLayer);
+      this.snowFlakes.push({ g, bx: rand(0, 1600), y: rand(-900, 0), sp: rand(55, 120), ph: rand(0, 6) });
+    }
+    const leaf = svgEl('g', { transform: 'translate(1060 272)', opacity: 0 }, fx);
+    svgEl('line', { x1: 0, y1: -40, x2: 0, y2: 0, stroke: '#6e4423', 'stroke-width': 4, 'stroke-linecap': 'round' }, leaf);
+    svgEl('path', { d: 'M0,0 C-36,12 -42,58 0,88 C42,58 36,12 0,0 Z', fill: '#5da65a', stroke: '#3f7d3f', 'stroke-width': 3 }, leaf);
+    svgEl('path', { d: 'M0,8 L0,80 M0,26 L-16,38 M0,26 L16,38 M0,48 L-13,58 M0,48 L13,58', stroke: '#3f7d3f', 'stroke-width': 2.5, fill: 'none', 'stroke-linecap': 'round', opacity: .7 }, leaf);
+    this.leafG = leaf;
+    this.rainRipples = [];
+    this.weatherTimer = rand(60, 120);
   },
 
   makeCloud(c) {
@@ -290,12 +323,17 @@ const Scene = {
     }
   },
 
-  spawnLeaf() {
+  spawnLeaf(kind = 'autumn') {
     const bx = rand(1130, 1390), by = rand(250, 340);
     const g = svgEl('g', { transform: `translate(${bx} ${by})` }, this.crittersG);
-    svgEl('ellipse', { rx: 10, ry: 4.5, fill: rand(0, 1) > .5 ? '#e8a13d' : '#d97f2e' }, g);
-    svgEl('line', { x1: -8, y1: 0, x2: 8, y2: 0, stroke: '#b3641f', 'stroke-width': 1.5, opacity: .6 }, g);
-    this.leaves.push({ g, bx, by, x: 0, y: 0, vx: rand(-30, 30), vy: rand(45, 75), rot: rand(0, 360), vr: rand(-160, 160), ph: rand(0, 6) });
+    const K = {
+      autumn: { fill: ['#e8a13d', '#d97f2e', '#c96a2a'][Math.floor(rand(0, 3))], vy: [45, 75], grav: 30, rx: 10, ry: 4.5 },
+      spring: { fill: Math.random() > .5 ? '#ffb7d5' : '#ffd1e8', vy: [22, 40], grav: 12, rx: 7, ry: 5 },
+      summer: { fill: '#7cb95c', vy: [40, 60], grav: 25, rx: 9, ry: 4 }
+    }[kind];
+    svgEl('ellipse', { rx: K.rx, ry: K.ry, fill: K.fill }, g);
+    svgEl('line', { x1: -K.rx * .8, y1: 0, x2: K.rx * .8, y2: 0, stroke: '#b3641f', 'stroke-width': 1.5, opacity: .6 }, g);
+    this.leaves.push({ g, bx, by, x: 0, y: 0, vx: rand(-30, 30), vy: rand(K.vy[0], K.vy[1]), grav: K.grav, rot: rand(0, 360), vr: rand(-160, 160), ph: rand(0, 6) });
   },
 
   isNight() {
@@ -325,11 +363,76 @@ const Scene = {
     this.tint.setAttribute('opacity', (duskWarm * .14 + this.night * .45).toFixed(3));
   },
 
+  nextWeather() {
+    if (this.weather === 'clear') {
+      this.weather = 'rain';
+      this.weatherTimer = rand(25, 40);
+    } else if (this.weather === 'rain') {
+      this.weather = 'rainbow';
+      this.weatherTimer = rand(16, 22);
+    } else {
+      this.weather = 'clear';
+      this.weatherTimer = rand(90, 150);
+    }
+  },
+
+  updateWeather(dt, t) {
+    this.weatherTimer -= dt;
+    if (this.weatherTimer <= 0) this.nextWeather();
+    this.rainFade += ((this.weather === 'rain' ? 1 : 0) - this.rainFade) * (1 - Math.exp(-dt * 2.5));
+    this.snowFade += ((this.weather === 'snow' ? 1 : 0) - this.snowFade) * (1 - Math.exp(-dt * 2.5));
+    this.rainbowFade += ((this.weather === 'rainbow' ? 1 : 0) - this.rainbowFade) * (1 - Math.exp(-dt * 1.2));
+    this.rainLayer.setAttribute('opacity', this.rainFade.toFixed(3));
+    this.snowLayer.setAttribute('opacity', this.snowFade.toFixed(3));
+    this.rainbowG.setAttribute('opacity', this.rainbowFade.toFixed(3));
+    if (this.rainFade > .02) {
+      for (const d of this.rainDrops) {
+        d.y += d.sp * dt;
+        d.x -= 70 * dt;
+        if (d.y > 920) {
+          d.y = -30;
+          d.x = rand(-100, 1700);
+        }
+        d.g.setAttribute('transform', `translate(${d.x.toFixed(1)} ${d.y.toFixed(1)})`);
+      }
+      this.rainRipTimer -= dt;
+      if (this.rainRipTimer <= 0) {
+        this.rainRipTimer = rand(.3, .6);
+        if (this.rainRipples.length < 12) {
+          const el = svgEl('ellipse', { rx: 26, ry: 8, fill: 'none', stroke: '#eafcff', 'stroke-width': 3, opacity: 0 }, this.pondG);
+          this.rainRipples.push({ el, x: rand(-240, 240), y: rand(-30, 50), t: 0 });
+        }
+      }
+    }
+    for (let i = this.rainRipples.length - 1; i >= 0; i--) {
+      const r = this.rainRipples[i];
+      r.t += dt / .9;
+      if (r.t >= 1) {
+        r.el.remove();
+        this.rainRipples.splice(i, 1);
+        continue;
+      }
+      r.el.setAttribute('transform', `translate(${r.x} ${r.y}) scale(${(.4 + r.t * 2.2).toFixed(2)})`);
+      r.el.setAttribute('opacity', (.6 * (1 - r.t)).toFixed(2));
+    }
+    if (this.snowFade > .02) {
+      for (const f of this.snowFlakes) {
+        f.y += f.sp * dt;
+        if (f.y > 920) {
+          f.y = -20;
+          f.bx = rand(0, 1600);
+        }
+        f.g.setAttribute('transform', `translate(${(f.bx + Math.sin(t * 1.1 + f.ph) * 34).toFixed(1)} ${f.y.toFixed(1)})`);
+      }
+    }
+  },
+
   update(dt, t) {
     const k = 1 - Math.exp(-dt * 4);
     this.dayT = (this.dayT + dt * 1000 / this.dayMs) % 1;
     this.night = ramp01(this.dayT, .48, .60) * (1 - ramp01(this.dayT, .82, .94));
     this.updateSky(t);
+    this.updateWeather(dt, t);
     this.parallax.x += ((this.parallax.tx || 0) - this.parallax.x) * k;
     this.parallax.y += ((this.parallax.ty || 0) - this.parallax.y) * k;
     this.cloudsG.setAttribute('transform', `translate(${this.parallax.x * 16} ${this.parallax.y * 7})`);
@@ -393,7 +496,7 @@ const Scene = {
     }
     for (let i = this.leaves.length - 1; i >= 0; i--) {
       const l = this.leaves[i];
-      l.vy += 30 * dt;
+      l.vy += l.grav * dt;
       l.y += l.vy * dt;
       l.x += (l.vx + Math.sin(t * 2 + l.ph) * 26) * dt;
       l.rot = (l.rot + l.vr * dt) % 360;

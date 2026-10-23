@@ -68,11 +68,28 @@ function resetPoses() {
   Scene.releaseButterfly(Scene.butterflies[0]);
 }
 
-function updateRest(dt) {
-  if (storyActive) return;
+const HUDDLE_SPOTS = { Pip: { x: 1040, y: 417 }, Puff: { x: 1005, y: 419 } };
+
+function updateRest(dt, t) {
   const night = Scene.isNight();
+  const precip = Scene.weather === 'rain' || Scene.weather === 'snow';
+  const huddling = precip && !night && !storyActive;
+  Scene.huddle += ((huddling ? 1 : 0) - Scene.huddle) * (1 - Math.exp(-dt * 1.8));
+  if (Scene.leafG) {
+    const on = Scene.weather === 'rain' && !night ? Scene.huddle : 0;
+    Scene.leafG.setAttribute('opacity', on.toFixed(2));
+    Scene.leafG.setAttribute('transform', `translate(1060 272) rotate(${(Math.sin(t * 1.3) * 4).toFixed(2)})`);
+  }
+  if (storyActive) return;
   for (const o of allOwls) {
-    o.lid += ((night ? 1 : 0) - o.lid) * (1 - Math.exp(-dt * 2));
+    const spot = HUDDLE_SPOTS[o.name];
+    const tx = spot && huddling ? lerp(o.home.x, spot.x, Scene.huddle) : o.home.x;
+    const ty = spot && huddling ? lerp(o.home.y, spot.y, Scene.huddle) : o.home.y;
+    const k = 1 - Math.exp(-dt * 2.5);
+    o.x += (tx - o.x) * k;
+    o.y += (ty - o.y) * k;
+    const lidT = night ? 1 : huddling ? .5 : 0;
+    o.lid += (lidT - o.lid) * (1 - Math.exp(-dt * 2));
     o.bobAmp += ((night ? 3.6 : 2.5) - o.bobAmp) * (1 - Math.exp(-dt * 2));
     if (night) {
       o.zzzTimer -= dt;
@@ -220,7 +237,7 @@ window.addEventListener('keydown', e => {
 });
 
 setInterval(() => {
-  if (storyActive || Scene.isNight() || Math.random() < .55) return;
+  if (storyActive || Scene.isNight() || Scene.huddle > .3 || Math.random() < .55) return;
   const o = allOwls[Math.floor(Math.random() * allOwls.length)];
   const act = Math.random();
   if (act < .35) {
