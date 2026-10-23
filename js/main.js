@@ -32,9 +32,9 @@ const Audio = {
     o.start(t0);
     o.stop(t0 + dur + .05);
   },
-  hoot() {
-    this.tone(330, 170, .28, 'sine', .09);
-    setTimeout(() => this.tone(280, 140, .32, 'sine', .07), 150);
+  hoot(pitch = 1) {
+    this.tone(330 * pitch, 170 * pitch, .28, 'sine', .09);
+    setTimeout(() => this.tone(280 * pitch, 140 * pitch, .32, 'sine', .07), 150);
   },
   pop() {
     this.tone(520, 880, .07, 'triangle', .05);
@@ -59,13 +59,19 @@ const puff = new Owl(owlsG, { name: 'Puff', x: 800, y: 682, scale: .6, baby: tru
 const allOwls = [olive, pip, puff];
 
 let storyIdx = 0;
+let storyNow = -1;
 let storyActive = false;
 let storyToken = 0;
 let nextTimer = null;
+let nightPlayed = false;
+const dayIdxs = [];
+const nightIdxs = [];
+stories.forEach((s, i) => (s.night ? nightIdxs : dayIdxs).push(i));
 
 function resetPoses() {
   for (const o of allOwls) o.reset();
   Scene.releaseButterfly(Scene.butterflies[0]);
+  Scene.hedgehogReset();
 }
 
 const HUDDLE_SPOTS = { Pip: { x: 1040, y: 417 }, Puff: { x: 1005, y: 419 } };
@@ -106,6 +112,7 @@ async function runStory(i) {
   const token = ++storyToken;
   resetPoses();
   storyActive = true;
+  storyNow = i;
   S.ctrl = { skipped: false };
   try {
     await stories[i].run(S, { olive, pip, puff });
@@ -122,10 +129,16 @@ async function runStory(i) {
 
 function tryStart() {
   if (Scene.isNight()) {
+    if (!nightPlayed && nightIdxs.length) {
+      nightPlayed = true;
+      runStory(nightIdxs[Math.floor(Math.random() * nightIdxs.length)]);
+      return;
+    }
     nextTimer = setTimeout(tryStart, 8000);
     return;
   }
-  runStory(storyIdx++ % stories.length);
+  nightPlayed = false;
+  runStory(dayIdxs[storyIdx++ % dayIdxs.length]);
 }
 
 function scheduleNext() {
@@ -224,7 +237,7 @@ document.getElementById('btnFull').addEventListener('click', toggleFull);
 stage.addEventListener('dblclick', toggleFull);
 
 window.addEventListener('keydown', e => {
-  if (e.key === '1' || e.key === '2' || e.key === '3') {
+  if (e.key >= '1' && e.key <= '8') {
     playStory(Number(e.key) - 1);
   } else if (e.key === ' ') {
     e.preventDefault();

@@ -1,6 +1,6 @@
 # Baby Owl Hollow
 
-A single-page, screensaver-style animated scene in the spirit of Sierra's *Johnny Castaway*: a cute owl family — **Olive** the parent with baby owls **Pip** and **Puff** — living in a bright forest clearing. The family idles, hops and chases butterflies on its own, and auto-plays small looping stories: a first flight, a fishing lesson, and nap time. The world lives on: a day/night cycle with sun, moon, stars and fireflies (the owls nap at night), gentle weather (rain, rainbows, winter snow — the owls huddle under a leaf), and rotating seasons that recolor the trees and ground.
+A single-page, screensaver-style animated scene in the spirit of Sierra's *Johnny Castaway*: a cute owl family — **Olive** the parent with baby owls **Pip** and **Puff** — living in a bright forest clearing. The family idles, hops and chases butterflies on its own, and auto-plays small looping stories: a first flight, a fishing lesson, nap time, bath time, a visit from a shy hedgehog, a lost pebble, a night-time constellation lesson, and band practice. The world lives on: a day/night cycle with sun, moon, stars and fireflies (the owls nap at night), gentle weather (rain, rainbows, winter snow — the owls huddle under a leaf), and rotating seasons that recolor the trees and ground.
 
 > **This project is a test of the Mistral Large 4 model**, which is still in its preview phase. It was designed and built end-to-end by an AI coding agent ([opencode](https://opencode.ai)) from a single natural-language prompt.
 
@@ -15,7 +15,7 @@ No build step, no dependencies, no network requests — plain HTML, CSS and Java
 
 | Input | Action |
 | --- | --- |
-| `1` / `2` / `3` | Jump to a story |
+| `1` – `8` | Jump to a story |
 | `Space` | Skip the current story |
 | `F` | Toggle fullscreen |
 | `M` | Toggle sound (off by default) |
@@ -29,10 +29,10 @@ No build step, no dependencies, no network requests — plain HTML, CSS and Java
 | --- | --- |
 | `index.html` | Page, SVG gradients, layer groups |
 | `css/style.css` | Page styling |
-| `js/scene.js` | World building (sky, pond, tree, grass), ambient animation, atmosphere (day/night, weather, seasons), shared helpers |
+| `js/scene.js` | World building (sky, pond, tree, grass, hedgehog), ambient animation, atmosphere (day/night, weather, seasons), shared helpers |
 | `js/owls.js` | The `Owl` class: anatomy, blinking, gaze, hopping, flapping |
-| `js/stories.js` | The three story scripts, shared coordinates (`POS`), stage helpers (`S`) |
-| `js/main.js` | Boot, animation loop, input, story scheduler, sleep/huddle posing, sound |
+| `js/stories.js` | The eight story scripts, shared coordinates (`POS`), stage helpers (`S`) |
+| `js/main.js` | Boot, animation loop, input, story scheduler (day rotation + once-per-night night story), sleep/huddle posing, sound |
 | `test/smoke.js` | jsdom smoke test that boots the real page and checks structure, stories and interactions |
 | `DESIGN.md` | Design document |
 | `TASKS.md` | Task list, story beats and coordinate table |
@@ -46,7 +46,7 @@ No build step, no dependencies, no network requests — plain HTML, CSS and Java
 # syntax check
 for f in js/*.js; do node --check "$f"; done
 
-# smoke test (boots the page in jsdom, ~15 s)
+# smoke test (boots the page in jsdom, ~30 s)
 cd test && npm install   # first time only
 npm test
 ```

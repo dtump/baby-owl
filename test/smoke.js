@@ -1,6 +1,6 @@
 // Smoke test: boots the real index.html + all four scripts in jsdom and checks
 // structure, interactions, and the story skip/reset machinery.
-// Run from this directory: npm test   (~15 s)
+// Run from this directory: npm test   (~30 s)
 
 const fs = require('fs');
 const path = require('path');
@@ -34,13 +34,14 @@ async function main() {
     .map(f => fs.readFileSync(path.join(root, 'js', f), 'utf8'))
     .join('\n;\n');
   window.eval(bundle + `
-;window.__test = {
-  olive, pip, puff, Scene, stories, S,
-  runStory, skipStory, playStory, tryStart,
-  get storyActive() { return storyActive; },
-  get nextTimerSet() { return !!nextTimer; },
-  clearNext() { clearTimeout(nextTimer); }
-};`);
+ ;window.__test = {
+   olive, pip, puff, Scene, stories, S, POS,
+   runStory, skipStory, playStory, tryStart,
+   get storyActive() { return storyActive; },
+   get storyNow() { return storyNow; },
+   get nextTimerSet() { return !!nextTimer; },
+   clearNext() { clearTimeout(nextTimer); }
+ };`);
   const T = window.__test;
   const { olive, pip, puff } = T;
 
@@ -55,7 +56,8 @@ async function main() {
   // --- structure ---
   assert(document.getElementById('owls').children.length === 3, 'three owls on stage');
   assert([olive.name, pip.name, puff.name].join(',') === 'Olive,Pip,Puff', 'owl names');
-  assert(T.stories.map(s => s.name).join('|') === 'First Flight|Fishing Lesson|Nap Time', 'three stories');
+  assert(T.stories.map(s => s.name).join('|') === 'First Flight|Fishing Lesson|Nap Time|Bath Time|The New Friend|Lost & Found|Constellation Lesson|Band Practice', 'eight stories');
+  assert(T.stories.filter(s => s.night).map(s => s.name).join('|') === 'Constellation Lesson', 'constellation lesson is the night story');
 
   for (const o of [olive, pip, puff]) {
     const discs = [...o.bob.querySelectorAll('circle')].filter(c => c.getAttribute('r') === '31');
@@ -87,6 +89,27 @@ async function main() {
   }
   assert(trunkZone.length === 0, 'no grass/flowers/mushrooms in front of the trunk ' + JSON.stringify(trunkZone));
 
+  // --- hedgehog critter (hidden until its story) ---
+  assert(!!T.Scene.hedgehog && T.Scene.hedgehog.g.parentNode === document.getElementById('critters'), 'hedgehog lives in the critters layer');
+  assert(+T.Scene.hedgehog.g.getAttribute('opacity') === 0, 'hedgehog hides until its story');
+
+  // --- props must not overlap: the log must not sit on a mushroom ---
+  function boxOf(g, x0, x1, y0, y1) {
+    const m = (g.getAttribute('transform') || '').match(/translate\(([-\d.]+) ([-\d.]+)\)(?: scale\(([\d.]+)\))?/);
+    const x = +m[1], y = +m[2], s = m[3] ? +m[3] : 1;
+    return { x0: x + x0 * s, x1: x + x1 * s, y0: y + y0 * s, y1: y + y1 * s };
+  }
+  const logBox = boxOf(T.Scene.logG, -83, 83, -26, 26);
+  const shroomOverlap = T.Scene.mushrooms.some(g => {
+    const b = boxOf(g, -58, 58, -72, 2);
+    return b.x0 < logBox.x1 && b.x1 > logBox.x0 && b.y0 < logBox.y1 && b.y1 > logBox.y0;
+  });
+  assert(!shroomOverlap, 'log does not sit on a mushroom');
+
+  // --- story landing spots stay out of the pond ---
+  const pondOut = p => ((p.x - 400) / 285) ** 2 + ((p.y - 795) / 80) ** 2 > 1;
+  assert(['pipBath', 'puffBath', 'pipVisit', 'puffFind', 'puffGive'].every(k => pondOut(T.POS[k])), 'story spots stay out of the pond');
+
   // Stop the boot story timer so it cannot race the tests.
   T.clearNext();
 
@@ -107,8 +130,8 @@ async function main() {
   T.Scene.pondG.dispatchEvent(new window.MouseEvent('click', { bubbles: true, clientX: 400, clientY: 795 }));
   assert(fx.children.length >= n + 6, 'pond click spawns splash (ripple + 5 drops)');
 
-  // --- stories: skip all three ---
-  for (let i = 0; i < 3; i++) {
+  // --- stories: skip all eight ---
+  for (let i = 0; i < T.stories.length; i++) {
     const p = T.runStory(i);
     await sleep(150);
     assert(T.storyActive === true, 'story ' + i + ' (' + T.stories[i].name + ') is active');
@@ -118,16 +141,17 @@ async function main() {
     assert(olive.x === olive.home.x && olive.y === olive.home.y &&
            pip.x === pip.home.x && pip.y === pip.home.y &&
            puff.x === puff.home.x && puff.y === puff.home.y, 'story ' + i + ': owls back home');
-    assert(olive.lid === 0 && pip.lid === 0 && puff.lid === 0 && !olive.fish, 'story ' + i + ': poses reset');
+    assert(olive.lid === 0 && pip.lid === 0 && puff.lid === 0 && !olive.fish && !olive.pebble && !pip.fish && !pip.pebble && !puff.fish && !puff.pebble, 'story ' + i + ': poses reset');
+    assert(+T.Scene.hedgehog.g.getAttribute('opacity') === 0, 'story ' + i + ': hedgehog hidden after skip');
     T.clearNext();
   }
 
   // --- one story runs to natural completion and reschedules ---
   const t0 = Date.now();
-  await T.runStory(0);
+  await T.runStory(3);
   const dur = Date.now() - t0;
-  assert(dur > 8000, 'story 0 runs to completion without skip (~11 s, took ' + (dur / 1000).toFixed(1) + 's)');
-  assert(T.storyActive === false, 'story 0 finished');
+  assert(dur > 8000, 'story 3 (Bath Time) runs to completion without skip (~11 s, took ' + (dur / 1000).toFixed(1) + 's)');
+  assert(T.storyActive === false, 'story 3 finished');
   assert(T.nextTimerSet, 'next story scheduled');
   assert(olive.x === olive.home.x && pip.x === pip.home.x && puff.x === puff.home.x, 'owls home after natural finish');
   T.clearNext();
@@ -150,16 +174,28 @@ async function main() {
 
   pump(240);
   assert(olive.lid > .9 && pip.lid > .9 && puff.lid > .9, 'owls fall asleep at night');
-  T.Scene.dayT = .2;
-  pump(240);
-  assert(olive.lid < .1 && pip.lid < .1 && puff.lid < .1, 'owls wake up in the morning');
 
   T.Scene.dayT = .72;
   T.clearNext();
   T.tryStart();
-  assert(T.storyActive === false, 'no story starts while the owls sleep');
-  assert(T.nextTimerSet, 'scheduler re-checks after night');
+  assert(T.storyActive === true, 'night story starts at night');
+  assert(T.stories[T.storyNow].night === true, 'only the night story plays at night');
+  let guard = 0;
+  while (T.storyActive && guard++ < 100) await sleep(200);
+  assert(T.storyActive === false, 'night story runs to completion');
+  assert(T.stories[T.storyNow].name === 'Constellation Lesson', 'the night story is the constellation lesson');
+  assert(olive.x === olive.home.x && pip.x === pip.home.x && puff.x === puff.home.x, 'owls home after the night story');
   T.clearNext();
+  T.tryStart();
+  assert(T.storyActive === false, 'night story plays only once per night');
+  assert(T.nextTimerSet, 'scheduler re-checks after the night story');
+  T.clearNext();
+  pump(240);
+  assert(olive.lid > .9, 'owls tuck back in after the night lesson');
+  T.Scene.dayT = .2;
+  pump(240);
+  assert(olive.lid < .1 && pip.lid < .1 && puff.lid < .1, 'owls wake up in the morning');
+
   T.Scene.dayT = .2;
   T.tryStart();
   await sleep(150);

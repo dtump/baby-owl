@@ -238,5 +238,9 @@ class Owl {
       this.fish.remove();
       this.fish = null;
     }
+    if (this.pebble) {
+      this.pebble.remove();
+      this.pebble = null;
+    }
   }
 }

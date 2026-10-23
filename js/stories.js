@@ -8,7 +8,15 @@ const POS = {
   pondOlive: { x: 700, y: 703 },
   pondPuff: { x: 655, y: 708 },
   fishPoint: { x: 505, y: 786 },
-  puffSplash: { x: 545, y: 782 }
+  puffSplash: { x: 545, y: 782 },
+  pipBath: { x: 262, y: 866 },
+  puffBath: { x: 348, y: 878 },
+  hedgehog: { x: 620, y: 884 },
+  pipVisit: { x: 520, y: 874 },
+  pebble: { x: 958, y: 858 },
+  puffFind: { x: 905, y: 852 },
+  puffGive: { x: 1005, y: 421 },
+  skyOwl: { x: 430, y: 185 }
 };
 
 const FONT = "'Trebuchet MS','Segoe UI',sans-serif";
@@ -244,6 +252,199 @@ const S = {
   hearts(owl) {
     S.heart(owl.x - 16, owl.y - 90 * owl.scale, .8);
     setTimeout(() => S.heart(owl.x + 18, owl.y - 100 * owl.scale, .6), 180);
+  },
+
+  async slide(g, x, y, dur) {
+    const m = (g.getAttribute('transform') || '').match(/translate\(([-\d.]+) ([-\d.]+)/);
+    const fx = m ? +m[1] : x;
+    const fy = m ? +m[2] : y;
+    const t0 = performance.now();
+    for (;;) {
+      await S.wait(16);
+      const p = clamp((performance.now() - t0) / dur, 0, 1);
+      g.setAttribute('transform', `translate(${lerp(fx, x, easeIO(p))} ${lerp(fy, y, easeIO(p))})`);
+      if (p >= 1) break;
+    }
+  },
+
+  async berryToss(from, to, dur) {
+    Audio.pop();
+    const layer = document.getElementById('fx');
+    const g = svgEl('g', {}, layer);
+    svgEl('circle', { r: 9, fill: '#e4572e', stroke: '#c23e1d', 'stroke-width': 2.5 }, g);
+    svgEl('circle', { cx: -3, cy: -3, r: 2.6, fill: '#ffb3a0', opacity: .9 }, g);
+    svgEl('path', { d: 'M0,-9 Q6,-18 12,-16 Q6,-10 0,-9 Z', fill: '#5da65a' }, g);
+    const c1 = { x: lerp(from.x, to.x, .3), y: Math.min(from.y, to.y) - 130 };
+    const c2 = { x: lerp(from.x, to.x, .7), y: Math.min(from.y, to.y) - 90 };
+    const t0 = performance.now();
+    try {
+      for (;;) {
+        await S.wait(16);
+        const p = clamp((performance.now() - t0) / dur, 0, 1);
+        const pt = cubic(from, c1, c2, to, easeIO(p));
+        const pt2 = cubic(from, c1, c2, to, easeIO(clamp(p + .02, 0, 1)));
+        g.setAttribute('transform', `translate(${pt.x} ${pt.y}) rotate(${(pt2.x - pt.x) * 2})`);
+        if (p >= 1) break;
+      }
+    } catch (err) {
+      g.remove();
+      throw err;
+    }
+    return g;
+  },
+
+  makePebble() {
+    const g = svgEl('g', {}, document.getElementById('fx'));
+    svgEl('circle', { r: 10, fill: '#9fb2c8', stroke: '#6e8296', 'stroke-width': 2.5 }, g);
+    svgEl('circle', { cx: -3, cy: -3.5, r: 3, fill: '#e8f0f8', opacity: .9 }, g);
+    return g;
+  },
+
+  holdPebble(owl, g) {
+    owl.bob.appendChild(g);
+    g.setAttribute('transform', 'translate(0 14) scale(.8)');
+    owl.pebble = g;
+  },
+
+  unholdPebble(owl) {
+    const g = owl.pebble;
+    if (!g) return;
+    owl.pebble = null;
+    document.getElementById('fx').appendChild(g);
+    g.setAttribute('transform', `translate(${owl.x - 4} ${owl.y - 40 * owl.scale})`);
+  },
+
+  async dropPebble(g, to, dur) {
+    Audio.pop();
+    const m = (g.getAttribute('transform') || '').match(/translate\(([-\d.]+) ([-\d.]+)/);
+    const from = { x: m ? +m[1] : to.x, y: m ? +m[2] : to.y - 200 };
+    const t0 = performance.now();
+    try {
+      for (;;) {
+        await S.wait(16);
+        const p = clamp((performance.now() - t0) / dur, 0, 1);
+        g.setAttribute('transform', `translate(${lerp(from.x, to.x, p)} ${lerp(from.y, to.y, Math.pow(p, 1.6))})`);
+        if (p >= 1) break;
+      }
+      const t1 = performance.now();
+      for (;;) {
+        await S.wait(16);
+        const p = clamp((performance.now() - t1) / 220, 0, 1);
+        g.setAttribute('transform', `translate(${to.x} ${to.y - Math.sin(p * Math.PI) * 12})`);
+        if (p >= 1) break;
+      }
+      g.setAttribute('transform', `translate(${to.x} ${to.y})`);
+    } catch (err) {
+      g.remove();
+      throw err;
+    }
+  },
+
+  glint(x, y, s = 1) {
+    const layer = document.getElementById('fx');
+    const g = svgEl('g', { transform: `translate(${x} ${y}) scale(${s})` }, layer);
+    svgEl('path', { d: 'M0,-12 L2.6,-2.6 L12,0 L2.6,2.6 L0,12 L-2.6,2.6 L-12,0 L-2.6,-2.6 Z', fill: '#fff6c8', stroke: '#e8c84a', 'stroke-width': 1.5, 'paint-order': 'stroke' }, g);
+    const born = performance.now();
+    pushFx({
+      update: () => {
+        const a = (performance.now() - born) / 700;
+        if (a >= 1) return true;
+        g.setAttribute('transform', `translate(${x} ${y}) scale(${s * (1 + .3 * Math.sin(a * Math.PI * 3))}) rotate(${a * 120})`);
+        g.setAttribute('opacity', 1 - a);
+        return false;
+      },
+      kill: () => g.remove()
+    });
+  },
+
+  constellation(cx, cy, dur) {
+    const layer = document.getElementById('fx');
+    const g = svgEl('g', { transform: `translate(${cx} ${cy})`, opacity: 0 }, layer);
+    const P = [[-34, -52], [34, -52], [-48, -28], [48, -28], [-20, -22], [20, -22], [0, -10], [-52, 6], [52, 6], [-62, 26], [62, 26], [0, 44], [-14, 54], [14, 54]];
+    const segs = [[0, 2], [2, 4], [4, 6], [6, 5], [5, 3], [3, 1], [2, 7], [7, 9], [9, 11], [11, 10], [10, 8], [8, 3], [11, 12], [11, 13]];
+    let d = '';
+    for (const [a, b] of segs) d += `M${P[a][0]},${P[a][1]} L${P[b][0]},${P[b][1]}`;
+    svgEl('path', { d, stroke: '#cfe4ff', 'stroke-width': 2.5, fill: 'none', 'stroke-linecap': 'round', opacity: .85 }, g);
+    const stars = P.map(([x, y]) => svgEl('path', {
+      d: 'M0,-8 L2,-2 L8,0 L2,2 L0,8 L-2,2 L-8,0 L-2,-2 Z',
+      transform: `translate(${x} ${y})`,
+      fill: '#ffffff', stroke: '#33456b', 'stroke-width': 1.6, 'paint-order': 'stroke'
+    }, g));
+    const born = performance.now();
+    let dieT = -1;
+    pushFx({
+      update: (dt, t) => {
+        const age = (performance.now() - born) / 1000;
+        if (S.ctrl && S.ctrl.skipped && dieT < 0) dieT = age;
+        const fadeIn = clamp(age / .4, 0, 1);
+        const fadeOut = dieT >= 0
+          ? clamp(1 - (age - dieT) / .35, 0, 1)
+          : clamp(1 - Math.max(0, age - (dur / 1000 - .8)) / .8, 0, 1);
+        g.setAttribute('opacity', (fadeIn * fadeOut).toFixed(3));
+        const reveal = age / (dur / 1000) * (P.length + 3);
+        for (let i = 0; i < stars.length; i++) {
+          const pop = clamp(reveal - i, 0, 1);
+          const tw = .72 + .28 * Math.sin(t * 2.6 + i * 1.9);
+          stars[i].setAttribute('transform', `translate(${P[i][0]} ${P[i][1]}) scale(${.4 + .6 * pop})`);
+          stars[i].setAttribute('opacity', (pop * tw).toFixed(3));
+        }
+        return dieT >= 0 ? age - dieT > .35 : age > dur / 1000;
+      },
+      kill: () => g.remove()
+    });
+  },
+
+  notes(owl, dur) {
+    const layer = document.getElementById('fx');
+    const born = performance.now();
+    pushFx({
+      update: (dt) => {
+        const age = (performance.now() - born) / 1000;
+        if (age < dur / 1000 && Math.random() < dt * 1.4) {
+          const z = svgEl('text', {
+            x: owl.x + rand(-16, 16),
+            y: owl.y - 100 * owl.scale,
+            'text-anchor': 'middle',
+            'font-family': FONT,
+            'font-size': rand(18, 26),
+            'font-weight': 800,
+            fill: '#e8a04c',
+            stroke: '#ffffff',
+            'stroke-width': 4,
+            'paint-order': 'stroke'
+          }, layer);
+          z.textContent = '♪';
+          const zb = performance.now();
+          pushFx({
+            update: () => {
+              const a = (performance.now() - zb) / 1400;
+              if (a >= 1) return true;
+              z.setAttribute('y', owl.y - 100 * owl.scale - a * 50);
+              z.setAttribute('x', owl.x + Math.sin(a * 3) * 12);
+              z.setAttribute('opacity', 1 - a);
+              return false;
+            },
+            kill: () => z.remove()
+          });
+        }
+        return age >= dur / 1000;
+      },
+      kill: () => {}
+    });
+  },
+
+  nom(g, dur = 450) {
+    const base = g.getAttribute('transform') || '';
+    const born = performance.now();
+    pushFx({
+      update: () => {
+        const p = clamp((performance.now() - born) / dur, 0, 1);
+        g.setAttribute('transform', `${base} scale(${1 - p * .9})`);
+        g.setAttribute('opacity', 1 - p);
+        return p >= 1;
+      },
+      kill: () => g.remove()
+    });
   }
 };
 
@@ -355,6 +556,196 @@ const stories = [
       await S.say(olive, 'Sweet dreams', 1400);
       await S.wiggle(pip, 600, 8);
       await S.wiggle(puff, 600, 8);
+    }
+  },
+  {
+    name: 'Bath Time',
+    run: async (S, o) => {
+      const { olive, pip, puff } = o;
+      olive.lookLock = true;
+      olive.lookWorld = POS.pipBath;
+      await S.say(olive, 'Splash time!', 1400);
+      await S.flyPath(pip, POS.pip, { x: 800, y: 560 }, { x: 420, y: 720 }, POS.pipBath, 1500);
+      await S.flyPath(puff, POS.puff, { x: 700, y: 600 }, { x: 480, y: 740 }, POS.puffBath, 1300);
+      olive.lookWorld = POS.puffBath;
+      pip.hop(14);
+      S.splash(POS.pipBath.x, POS.pipBath.y + 4);
+      await S.say(pip, 'Whee!', 1100);
+      await S.wait(300);
+      puff.hop(16);
+      S.splash(POS.puffBath.x, POS.puffBath.y + 4, true);
+      await S.say(puff, 'Again!', 1200);
+      olive.lookWorld = POS.pipBath;
+      await S.say(olive, 'Careful now!', 1400);
+      await S.wait(250);
+      pip.hop(14);
+      S.splash(POS.pipBath.x, POS.pipBath.y + 4);
+      puff.hop(14);
+      S.splash(POS.puffBath.x, POS.puffBath.y + 4);
+      await S.wait(600);
+      await S.flyPath(pip, POS.pipBath, { x: 420, y: 700 }, { x: 780, y: 540 }, POS.pip, 1400);
+      await S.flyPath(puff, POS.puffBath, { x: 500, y: 720 }, { x: 720, y: 580 }, POS.puff, 1300);
+      olive.lookLock = false;
+      olive.lookWorld = null;
+      await S.wiggle(pip, 700);
+      await S.wiggle(puff, 700);
+      S.hearts(puff);
+    }
+  },
+  {
+    name: 'The New Friend',
+    run: async (S, o) => {
+      const { olive, pip, puff } = o;
+      const hg = Scene.hedgehog;
+      Scene.hedgehogShow(-140, 884);
+      for (const ow of [olive, pip, puff]) {
+        ow.lookLock = true;
+        ow.lookWorld = POS.hedgehog;
+      }
+      await S.slide(hg.g, POS.hedgehog.x, POS.hedgehog.y, 2600);
+      await S.wait(400);
+      await S.say(olive, 'Hello?', 1200);
+      await S.flyPath(pip, POS.pip, { x: 760, y: 560 }, { x: 640, y: 720 }, POS.pipVisit, 1300);
+      pip.lookWorld = { x: 648, y: 860 };
+      await S.say(pip, 'Hi!', 1000);
+      pip.hop(12);
+      await S.wait(500);
+      await S.say(pip, '…', 900);
+      await S.say(puff, 'For you!', 1100);
+      const berry = await S.berryToss({ x: POS.puff.x, y: POS.puff.y - 40 }, { x: 648, y: 872 }, 900);
+      Scene.hedgehogPeek(false);
+      S.glint(648, 872, .9);
+      await S.wait(500);
+      S.nom(berry);
+      S.heart(640, 850, .8);
+      await S.wait(400);
+      await S.say(olive, 'Share nicely.', 1300);
+      await S.slide(hg.g, POS.hedgehog.x, POS.hedgehog.y - 12, 180);
+      await S.slide(hg.g, POS.hedgehog.x, POS.hedgehog.y, 220);
+      pip.flap(9, 26);
+      puff.flap(9, 26);
+      await S.wait(700);
+      pip.flap(0, 0);
+      pip.flapBase = 15;
+      puff.flap(0, 0);
+      puff.flapBase = 15;
+      await S.say(pip, 'Bye!', 900);
+      await S.say(puff, 'Bye!', 900);
+      Scene.hedgehogFlip(-1);
+      await S.slide(hg.g, -160, 884, 2200);
+      Scene.hedgehogHide();
+      await S.flyPath(pip, POS.pipVisit, { x: 660, y: 700 }, { x: 800, y: 540 }, POS.pip, 1300);
+      for (const ow of [olive, pip, puff]) {
+        ow.lookLock = false;
+        ow.lookWorld = null;
+      }
+      S.hearts(pip);
+    }
+  },
+  {
+    name: 'Lost & Found',
+    run: async (S, o) => {
+      const { olive, pip, puff } = o;
+      const pebble = S.makePebble();
+      S.holdPebble(pip, pebble);
+      pip.lookLock = true;
+      pip.lookWorld = POS.pebble;
+      olive.lookLock = true;
+      olive.lookWorld = POS.pebble;
+      await S.say(pip, '?', 1000);
+      S.unholdPebble(pip);
+      await S.dropPebble(pebble, POS.pebble, 1100);
+      S.glint(POS.pebble.x, POS.pebble.y - 6, 1.1);
+      await S.wait(400);
+      await S.say(pip, 'Oh no…', 1200);
+      await S.flyPath(puff, POS.puff, { x: 760, y: 590 }, { x: 860, y: 720 }, POS.puffFind, 1200);
+      puff.lookLock = true;
+      puff.lookWorld = POS.pebble;
+      await S.bounce(puff, 2, 420);
+      await S.wait(300);
+      S.glint(POS.pebble.x, POS.pebble.y - 6, 1.2);
+      await S.say(puff, '!', 900);
+      S.holdPebble(puff, pebble);
+      await S.flyPath(puff, POS.puffFind, { x: 880, y: 700 }, { x: 950, y: 560 }, POS.puffGive, 1200);
+      S.unholdPebble(puff);
+      S.holdPebble(pip, pebble);
+      puff.lookWorld = POS.pip;
+      S.heart(POS.pip.x + 10, POS.pip.y - 90, .8);
+      await S.say(pip, '!', 900);
+      S.hearts(pip);
+      await S.say(olive, 'Good eyes, Puff!', 1400);
+      S.nom(pebble, 500);
+      pip.pebble = null;
+      await S.flyPath(puff, POS.puffGive, { x: 950, y: 580 }, { x: 860, y: 650 }, POS.puff, 1200);
+      olive.lookLock = false;
+      olive.lookWorld = null;
+      pip.lookLock = false;
+      pip.lookWorld = null;
+      puff.lookLock = false;
+      puff.lookWorld = null;
+    }
+  },
+  {
+    name: 'Constellation Lesson',
+    night: true,
+    run: async (S, o) => {
+      const { olive, pip, puff } = o;
+      const c = POS.skyOwl;
+      for (const ow of [olive, pip, puff]) {
+        ow.lookLock = true;
+        ow.lookWorld = c;
+      }
+      await S.say(olive, 'Look up…', 1500);
+      S.constellation(c.x, c.y, 6500);
+      await S.wait(1200);
+      await S.say(olive, 'See? An owl.', 1600);
+      await S.wait(1800);
+      pip.lookWorld = { x: c.x - 30, y: c.y - 40 };
+      puff.lookWorld = { x: c.x + 30, y: c.y - 40 };
+      await S.say(pip, 'Ooo!', 1000);
+      await S.say(puff, 'Ooo!', 1000);
+      await S.wait(1600);
+      await S.say(olive, 'Hoo hoo.', 1300);
+      for (const ow of [olive, pip, puff]) {
+        ow.lookLock = false;
+        ow.lookWorld = null;
+      }
+      S.heart(c.x, c.y - 80, .9);
+    }
+  },
+  {
+    name: 'Band Practice',
+    run: async (S, o) => {
+      const { olive, pip, puff } = o;
+      Audio.hoot(.75);
+      await S.say(olive, '♪', 950);
+      Audio.hoot(1);
+      await S.say(pip, '♪', 950);
+      Audio.hoot(1.3);
+      await S.say(puff, '♪', 950);
+      S.notes(olive, 1600);
+      S.notes(pip, 1600);
+      S.notes(puff, 1600);
+      Audio.hoot(.75);
+      Audio.hoot(1);
+      Audio.hoot(1.35);
+      await Promise.all([
+        S.say(olive, 'Hoo hoo!', 1500),
+        S.say(pip, 'Hoo!', 1500),
+        S.say(puff, 'Hoo!', 1500)
+      ]);
+      olive.flapBase = 62;
+      pip.flapBase = 62;
+      puff.flapBase = 62;
+      await S.wait(500);
+      olive.flapBase = 15;
+      pip.flapBase = 15;
+      puff.flapBase = 15;
+      S.hearts(olive);
+      S.hearts(pip);
+      S.hearts(puff);
+      await S.say(olive, 'Bravo!', 1200);
+      await S.wiggle(pip, 600, 8);
     }
   }
 ];

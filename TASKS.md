@@ -15,6 +15,12 @@
 - [x] Atmosphere: day/night cycle (sky palettes, sun/moon, stars, fireflies, tint, sleeping owls, scheduler nap guard)
 - [x] Atmosphere: weather (rain + pond ripples, rainbow, snow, huddle under a leaf)
 - [x] Atmosphere: seasons (foliage/grass recolor, blossom, falling leaves, snow ground)
+- [x] Visual fix: log no longer sits on the mushroom (moved to (1100, 888), smoke test guards the overlap)
+- [x] More stories: Bath Time (babies splash in the shallows, Olive supervises)
+- [x] More stories: The New Friend (shy hedgehog visits, owls share a berry)
+- [x] More stories: Lost & Found (Pip drops a shiny pebble, Puff finds it)
+- [x] More stories: Constellation Lesson (night story: stars form an owl, plays once per night)
+- [x] More stories: Band Practice (the owls hoot a little melody, pitch-aware hoots)
 
 ## Story beats (as implemented)
 
@@ -28,9 +34,28 @@
 3. **Nap Time** (~15 s): Olive yawns "Ahh…" → babies yawn → eyes droop → zzz +
    butterfly lands on Olive's head → wake: lids up, blink, wing stretch →
    "Sweet dreams" → babies wiggle.
+4. **Bath Time** (~11 s): Olive "Splash time!" → Pip and Puff fly to the
+   shallows → hop-splash, "Whee!", big splash, "Again!" → Olive "Careful
+   now!" → both splash → fly home → wiggles + hearts.
+5. **The New Friend** (~13 s): hedgehog waddles in along the shoreline →
+   owls watch → Olive "Hello?" → Pip flies down "Hi!" → Puff "For you!"
+   tosses a berry → hedgehog peeks, eats it (glint + heart) → Olive "Share
+   nicely." → happy bounce → owls flap-wave "Bye!" → hedgehog turns around
+   and waddles off → Pip flies home.
+6. **Lost & Found** (~11 s): Pip holds a shiny pebble "?" → drops it (gravity
+   fall + bounce + glint) → "Oh no…" → Puff flies down, hops searching →
+   glint, "!" → picks it up → flies to the branch, gives it to Pip → hearts
+   → Olive "Good eyes, Puff!" → pebble put away → Puff flies home.
+7. **Constellation Lesson** (~9 s, night story, once per night): owls look up →
+   Olive "Look up…" → stars draw an owl in the sky, twinkle → "See? An owl."
+   → babies "Ooo!" → "Hoo hoo." → heart → owls tuck back in.
+8. **Band Practice** (~7 s): Olive/Pip/Puff hoot low/mid/high ("♪") → all
+   three hoot a chord ("Hoo hoo!"/"Hoo!"/"Hoo!") with floating notes → wing
+   bows → hearts → Olive "Bravo!" → Pip wiggles.
 
-Stories auto-rotate forever with a 12–18 s idle gap; first story starts 3.5 s
-after load. Keys 1/2/3 jump, Space skips.
+Day stories auto-rotate forever with a 12–18 s idle gap; first story starts
+3.5 s after load. The night story plays once per night. Keys 1–8 jump, Space
+skips.
 
 ## Key coordinates (viewBox 1600x900)
 
@@ -44,3 +69,11 @@ after load. Keys 1/2/3 jump, Space skips.
 | Pond edge (Puff) | 655 | 708 | groundY 748 |
 | Fish water point | 505 | 786 | splash here |
 | Puff splash point | 545 | 782 | |
+| Pip bath (shallows) | 262 | 866 | pond's near edge |
+| Puff bath (shallows) | 348 | 878 | pond's near edge |
+| Hedgehog stop | 620 | 884 | shoreline, faces right |
+| Pip visit (greeting) | 520 | 874 | near hedgehog |
+| Pebble spot | 958 | 858 | grass, below branch |
+| Puff find (search) | 905 | 852 | left of pebble |
+| Puff give (branch) | 1005 | 421 | handoff to Pip |
+| Constellation center | 430 | 185 | sky, night story |

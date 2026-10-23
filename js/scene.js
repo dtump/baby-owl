@@ -272,11 +272,9 @@ const Scene = {
       svgEl('circle', { cx: 34, cy: -44, r: 6, fill: '#fff', opacity: .9 }, g);
       return g;
     };
-    this.mushroomBig = mushroom(800, 780, 1);
-    mushroom(1080, 860, .6);
-    mushroom(185, 868, .5);
+    this.mushrooms = [mushroom(800, 780, 1), mushroom(1100, 888, .55), mushroom(185, 868, .5)];
 
-    const log = svgEl('g', { transform: 'translate(1050 818) rotate(-5)' }, fg);
+    const log = this.logG = svgEl('g', { transform: 'translate(1050 818) rotate(-5)' }, fg);
     svgEl('rect', { x: -75, y: -18, width: 150, height: 36, rx: 18, fill: '#8a5a33', stroke: '#6e4423', 'stroke-width': 3 }, log);
     svgEl('ellipse', { cx: -72, cy: 0, rx: 11, ry: 16, fill: '#d9b98a', stroke: '#b5906a', 'stroke-width': 2 }, log);
     svgEl('ellipse', { cx: -72, cy: 0, rx: 5, ry: 8, fill: 'none', stroke: '#b5906a', 'stroke-width': 2 }, log);
@@ -306,6 +304,52 @@ const Scene = {
       svgEl('circle', { r: 2.6, fill: '#f4ffb0' }, g);
       this.fireflies.push({ g, bx: rand(80, 1520), by: rand(470, 820), rx: rand(50, 130), ry: rand(25, 60), sp: rand(.25, .6), ph: rand(0, 6), x: 0, y: 0 });
     }
+
+    const hg = svgEl('g', { transform: 'translate(-140 884)', opacity: 0 }, crit);
+    const flip = svgEl('g', {}, hg);
+    const hgb = svgEl('g', {}, flip);
+    svgEl('ellipse', { cx: -18, cy: 27, rx: 9, ry: 5.5, fill: '#8a5a3a' }, hgb);
+    svgEl('ellipse', { cx: 14, cy: 27, rx: 9, ry: 5.5, fill: '#8a5a3a' }, hgb);
+    svgEl('path', { d: 'M-46,-4 L-38,-24 L-30,-7 L-20,-28 L-10,-9 L0,-30 L10,-9 L20,-28 L30,-7 L38,-24 L46,-4', fill: 'none', stroke: '#7a4a2e', 'stroke-width': 6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, hgb);
+    svgEl('ellipse', { rx: 46, ry: 30, fill: '#a5714b', stroke: '#7a4a2e', 'stroke-width': 3 }, hgb);
+    svgEl('ellipse', { cx: 30, cy: 4, rx: 22, ry: 17, fill: '#e8c39a' }, hgb);
+    const hgE1 = svgEl('circle', { cx: 24, cy: -2, r: 3.2, fill: '#2d1a0e' }, hgb);
+    const hgE2 = svgEl('circle', { cx: 38, cy: -4, r: 3.2, fill: '#2d1a0e' }, hgb);
+    svgEl('circle', { cx: 48, cy: 1, r: 5, fill: '#4a2c17' }, hgb);
+    this.hedgehog = { g: hg, flip, body: hgb, eyes: [hgE1, hgE2], shy: true };
+    this.hedgehogDraw();
+  },
+
+  hedgehogDraw() {
+    const h = this.hedgehog;
+    h.body.setAttribute('transform', `translate(0 28) scale(1 ${h.shy ? .85 : 1}) translate(0 -28)`);
+    for (const e of h.eyes) e.setAttribute('opacity', h.shy ? 0 : 1);
+  },
+
+  hedgehogPeek(shy) {
+    this.hedgehog.shy = shy;
+    this.hedgehogDraw();
+  },
+
+  hedgehogShow(x, y) {
+    const h = this.hedgehog;
+    h.g.setAttribute('transform', `translate(${x} ${y})`);
+    h.g.setAttribute('opacity', 1);
+  },
+
+  hedgehogHide() {
+    this.hedgehog.g.setAttribute('opacity', 0);
+  },
+
+  hedgehogFlip(dir) {
+    this.hedgehog.flip.setAttribute('transform', dir < 0 ? 'scale(-1 1)' : '');
+  },
+
+  hedgehogReset() {
+    this.hedgehog.g.setAttribute('opacity', 0);
+    this.hedgehog.g.setAttribute('transform', 'translate(-140 884)');
+    this.hedgehogFlip(1);
+    this.hedgehogPeek(true);
   },
 
   makeButterfly(b) {

@@ -9,11 +9,11 @@
       bare tree + snow on the ground in winter).
 
 ## More stories
-- [ ] "Bath time" — babies splash in the shallows, Olive supervises.
-- [ ] "The new friend" — a shy hedgehog/squirrel visits; owls share berries.
-- [ ] "Lost & found" — Pip drops a shiny pebble, Puff "helps" find it.
-- [ ] "Constellation lesson" — night story where stars form an owl shape.
-- [ ] "Band practice" — the three owls hoot a little melody (with sound on).
+- [x] "Bath time" — babies splash in the shallows, Olive supervises.
+- [x] "The new friend" — a shy hedgehog/squirrel visits; owls share berries.
+- [x] "Lost & found" — Pip drops a shiny pebble, Puff "helps" find it.
+- [x] "Constellation lesson" — night story where stars form an owl shape.
+- [x] "Band practice" — the three owls hoot a little melody (with sound on).
 
 ## Interaction
 - [ ] Pet an owl (drag) → it nuzzles, eyes go to happy arcs `^‿^`.
