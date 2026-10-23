@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baby Owl Hollow</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img"
+     aria-label="A cheerful owl family living in a sunny forest clearing">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7ec8ff"/>
+      <stop offset=".55" stop-color="#bfe9ff"/>
+      <stop offset="1" stop-color="#eafcff"/>
+    </linearGradient>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7ed957"/>
+      <stop offset="1" stop-color="#3fa34d"/>
+    </linearGradient>
+    <linearGradient id="trunk" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9a6a3f"/>
+      <stop offset=".5" stop-color="#7c5230"/>
+      <stop offset="1" stop-color="#5f3d22"/>
+    </linearGradient>
+    <radialGradient id="pond" cx=".5" cy=".4" r=".85">
+      <stop offset="0" stop-color="#a5e8f5"/>
+      <stop offset=".6" stop-color="#5cc6e0"/>
+      <stop offset="1" stop-color="#2f9ec4"/>
+    </radialGradient>
+    <radialGradient id="sunG" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ffe98a"/>
+      <stop offset=".7" stop-color="#ffd34d"/>
+      <stop offset="1" stop-color="#ffb347"/>
+    </radialGradient>
+    <linearGradient id="owlBrown" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cf9463"/>
+      <stop offset="1" stop-color="#8f5a33"/>
+    </linearGradient>
+    <linearGradient id="owlTan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2d7b0"/>
+      <stop offset="1" stop-color="#cfa878"/>
+    </linearGradient>
+    <linearGradient id="owlGrey" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d5deeb"/>
+      <stop offset="1" stop-color="#93a7bd"/>
+    </linearGradient>
+    <radialGradient id="bellyG" cx=".5" cy=".35" r=".8">
+      <stop offset="0" stop-color="#fff3da"/>
+      <stop offset="1" stop-color="#ffe1b3"/>
+    </radialGradient>
+    <radialGradient id="irisG" cx=".4" cy=".35" r=".85">
+      <stop offset="0" stop-color="#ffd35c"/>
+      <stop offset=".6" stop-color="#f5b942"/>
+      <stop offset="1" stop-color="#e08e1f"/>
+    </radialGradient>
+    <radialGradient id="vig" cx=".5" cy=".45" r=".75">
+      <stop offset=".7" stop-color="#1c3a2a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#1c3a2a" stop-opacity=".18"/>
+    </radialGradient>
+  </defs>
+
+  <g id="bg"></g>
+  <g id="mid"></g>
+  <g id="fg"></g>
+  <g id="owls"></g>
+  <g id="critters" pointer-events="none"></g>
+  <g id="fx" pointer-events="none"></g>
+  <rect width="1600" height="900" fill="url(#vig)" pointer-events="none"/>
+</svg>
+
+<div id="title"><span>Baby Owl Hollow</span><small>a tiny screensaver</small></div>
+
+<div id="ui">
+  <div id="buttons">
+    <button id="btnSound" type="button" title="Toggle sound (M)">Sound: off</button>
+    <button id="btnFull" type="button" title="Fullscreen (F)">Fullscreen</button>
+  </div>
+  <div id="hint">move mouse &middot; click an owl &middot; 1/2/3 = story &middot; space = skip &middot; F = fullscreen</div>
+</div>
+
+<script src="js/scene.js"></script>
+<script src="js/owls.js"></script>
+<script src="js/stories.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
