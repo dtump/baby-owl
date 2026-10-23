@@ -1,11 +1,12 @@
 # Backlog — ideas for later (not in v1)
 
 ## Atmosphere
-- [ ] Day/night cycle: warm day → golden dusk → starry night with fireflies, moon,
-      owls wake/sleep on schedule. Stories adapt (night = "night light" story).
-- [ ] Weather: gentle rain (raindrops, puddle ripples, owls huddle under a leaf),
-      rainbow after rain, autumn leaves everywhere, light snow in winter.
-- [ ] Seasons: swap palette + foliage (blossom in spring, red leaves in autumn).
+- [x] Day/night cycle: warm day → golden dusk → starry night with fireflies, moon,
+      owls wake/sleep on schedule. (Stories pause at night — the owls nap.)
+- [x] Weather: gentle rain (raindrops, puddle ripples, owls huddle under a leaf),
+      rainbow after rain, light snow in winter.
+- [x] Seasons: swap palette + foliage (blossom in spring, red leaves in autumn,
+      bare tree + snow on the ground in winter).
 
 ## More stories
 - [ ] "Bath time" — babies splash in the shallows, Olive supervises.

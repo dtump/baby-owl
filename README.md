@@ -1,6 +1,6 @@
 # Baby Owl Hollow
 
-A single-page, screensaver-style animated scene in the spirit of Sierra's *Johnny Castaway*: a cute owl family — **Olive** the parent with baby owls **Pip** and **Puff** — living in a bright forest clearing. The family idles, hops and chases butterflies on its own, and auto-plays small looping stories: a first flight, a fishing lesson, and nap time.
+A single-page, screensaver-style animated scene in the spirit of Sierra's *Johnny Castaway*: a cute owl family — **Olive** the parent with baby owls **Pip** and **Puff** — living in a bright forest clearing. The family idles, hops and chases butterflies on its own, and auto-plays small looping stories: a first flight, a fishing lesson, and nap time. The world lives on: a day/night cycle with sun, moon, stars and fireflies (the owls nap at night), gentle weather (rain, rainbows, winter snow — the owls huddle under a leaf), and rotating seasons that recolor the trees and ground.
 
 > **This project is a test of the Mistral Large 4 model**, which is still in its preview phase. It was designed and built end-to-end by an AI coding agent ([opencode](https://opencode.ai)) from a single natural-language prompt.
 
@@ -29,10 +29,10 @@ No build step, no dependencies, no network requests — plain HTML, CSS and Java
 | --- | --- |
 | `index.html` | Page, SVG gradients, layer groups |
 | `css/style.css` | Page styling |
-| `js/scene.js` | World building (sky, pond, tree, grass), ambient animation, shared helpers |
+| `js/scene.js` | World building (sky, pond, tree, grass), ambient animation, atmosphere (day/night, weather, seasons), shared helpers |
 | `js/owls.js` | The `Owl` class: anatomy, blinking, gaze, hopping, flapping |
 | `js/stories.js` | The three story scripts, shared coordinates (`POS`), stage helpers (`S`) |
-| `js/main.js` | Boot, animation loop, input, story scheduler, sound |
+| `js/main.js` | Boot, animation loop, input, story scheduler, sleep/huddle posing, sound |
 | `test/smoke.js` | jsdom smoke test that boots the real page and checks structure, stories and interactions |
 | `DESIGN.md` | Design document |
 | `TASKS.md` | Task list, story beats and coordinate table |

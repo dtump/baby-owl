@@ -12,6 +12,9 @@
 - [x] Owl eyes rework: facial discs + amber irises + centered pupils (user feedback)
 - [x] Independent review-agent audit; fixed H1 (pupils), M1 (boot story race), M2 (fx click-through), M3 (yawn beak), L1/L2/L4-L13, L17 (crouch squash)
 - [x] Final polish + summary to user
+- [x] Atmosphere: day/night cycle (sky palettes, sun/moon, stars, fireflies, tint, sleeping owls, scheduler nap guard)
+- [x] Atmosphere: weather (rain + pond ripples, rainbow, snow, huddle under a leaf)
+- [x] Atmosphere: seasons (foliage/grass recolor, blossom, falling leaves, snow ground)
 
 ## Story beats (as implemented)
 

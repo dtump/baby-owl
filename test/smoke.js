@@ -36,7 +36,7 @@ async function main() {
   window.eval(bundle + `
 ;window.__test = {
   olive, pip, puff, Scene, stories, S,
-  runStory, skipStory, playStory,
+  runStory, skipStory, playStory, tryStart,
   get storyActive() { return storyActive; },
   get nextTimerSet() { return !!nextTimer; },
   clearNext() { clearTimeout(nextTimer); }
@@ -130,6 +130,106 @@ async function main() {
   assert(T.storyActive === false, 'story 0 finished');
   assert(T.nextTimerSet, 'next story scheduled');
   assert(olive.x === olive.home.x && pip.x === pip.home.x && puff.x === puff.home.x, 'owls home after natural finish');
+  T.clearNext();
+
+  // --- atmosphere: day/night cycle ---
+  const skyStop = document.querySelector('#sky stop');
+  T.Scene.dayT = .2;
+  pump(3);
+  const daySky = skyStop.getAttribute('stop-color');
+  assert(T.Scene.night === 0 && !T.Scene.isNight(), 'midday: night factor 0');
+  assert(+T.Scene.sun.getAttribute('opacity') > .9, 'sun is up at midday');
+  T.Scene.dayT = .72;
+  pump(3);
+  assert(T.Scene.night === 1 && T.Scene.isNight(), 'night: night factor 1');
+  assert(skyStop.getAttribute('stop-color') !== daySky, 'sky color changes day -> night');
+  assert(+T.Scene.tint.getAttribute('opacity') > .3, 'night tint darkens the scene');
+  assert(+T.Scene.starsG.getAttribute('opacity') === 1, 'stars out at night');
+  assert(+T.Scene.moon.getAttribute('opacity') === 1, 'moon out at night');
+  assert(+T.Scene.sun.getAttribute('opacity') < .05, 'sun hidden at night');
+
+  pump(240);
+  assert(olive.lid > .9 && pip.lid > .9 && puff.lid > .9, 'owls fall asleep at night');
+  T.Scene.dayT = .2;
+  pump(240);
+  assert(olive.lid < .1 && pip.lid < .1 && puff.lid < .1, 'owls wake up in the morning');
+
+  T.Scene.dayT = .72;
+  T.clearNext();
+  T.tryStart();
+  assert(T.storyActive === false, 'no story starts while the owls sleep');
+  assert(T.nextTimerSet, 'scheduler re-checks after night');
+  T.clearNext();
+  T.Scene.dayT = .2;
+  T.tryStart();
+  await sleep(150);
+  assert(T.storyActive === true, 'story starts in the daytime');
+  T.skipStory();
+  await sleep(120);
+  T.clearNext();
+
+  // --- weather: rain, huddle under a leaf, rainbow ---
+  T.Scene.weather = 'rain';
+  T.Scene.weatherTimer = 999;
+  pump(120);
+  assert(+T.Scene.rainLayer.getAttribute('opacity') > .8, 'rain falls');
+  assert(T.Scene.rainDrops.length === 90, 'rain has drops');
+  assert(T.Scene.rainRipples.length > 0, 'rain ripples the pond');
+  pump(200);
+  assert(T.Scene.huddle > .9, 'owls huddle in the rain');
+  assert(pip.x > pip.home.x + 20, 'Pip moves toward Olive in the rain');
+  assert(+T.Scene.leafG.getAttribute('opacity') > .8, 'leaf umbrella over the huddle');
+  assert(olive.lid > .3 && pip.lid > .3, 'owls squint in the rain');
+  T.Scene.weather = 'clear';
+  T.Scene.weatherTimer = 999;
+  pump(60);
+  assert(+T.Scene.rainLayer.getAttribute('opacity') < .2, 'rain fades out');
+  pump(240);
+  assert(T.Scene.huddle < .1, 'owls stop huddling when the rain ends');
+  assert(Math.abs(pip.x - pip.home.x) < 2, 'Pip back home after the rain');
+  assert(olive.lid < .1, 'owls stop squinting');
+  T.Scene.weather = 'rain';
+  T.Scene.weatherTimer = .01;
+  pump(2);
+  assert(T.Scene.weather === 'rainbow', 'rainbow follows the rain');
+  pump(120);
+  assert(+T.Scene.rainbowG.getAttribute('opacity') > .8, 'rainbow appears after the rain');
+  T.Scene.weatherTimer = .01;
+  pump(2);
+  assert(T.Scene.weather === 'clear', 'rainbow ends into clear weather');
+  pump(120);
+  assert(+T.Scene.rainbowG.getAttribute('opacity') < .2, 'rainbow fades away');
+  T.Scene.weather = 'clear';
+  T.Scene.weatherTimer = 999;
+
+  // --- seasons ---
+  const leaf0 = T.Scene.foliage.main[0].el;
+  T.Scene.dayCount = 1;
+  pump(2);
+  const summerFill = leaf0.getAttribute('fill');
+  T.Scene.dayCount = 2;
+  pump(2);
+  assert(leaf0.getAttribute('fill') !== summerFill, 'foliage changes color with the seasons');
+  T.Scene.dayCount = 3;
+  pump(2);
+  assert(+T.Scene.canopyG.getAttribute('opacity') < .5, 'canopy thins out in winter');
+  assert(+T.Scene.snowGround.getAttribute('opacity') > .2, 'snow blankets the ground in winter');
+  T.Scene.dayCount = 0;
+  pump(90);
+  assert(+T.Scene.blossomG.getAttribute('opacity') > .8, 'blossom in spring');
+  T.Scene.dayCount = 3;
+  pump(2);
+  T.Scene.weather = 'clear';
+  T.Scene.weatherTimer = .01;
+  pump(2);
+  assert(T.Scene.weather === 'snow', 'winter precipitation is snow');
+  pump(120);
+  assert(+T.Scene.snowLayer.getAttribute('opacity') > .8, 'snow falls in winter');
+  assert(+T.Scene.rainLayer.getAttribute('opacity') < .05, 'no rain in winter');
+  T.Scene.weather = 'clear';
+  T.Scene.weatherTimer = 999;
+  T.Scene.dayCount = 1;
+  pump(2);
 
   console.log(failures ? '\nSMOKE TEST FAILED (' + failures + ')' : '\nSMOKE TEST PASSED');
   process.exit(failures ? 1 : 0);
