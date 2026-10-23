@@ -1,0 +1,138 @@
+// Smoke test: boots the real index.html + all four scripts in jsdom and checks
+// structure, interactions, and the story skip/reset machinery.
+// Run from this directory: npm test   (~15 s)
+
+const fs = require('fs');
+const path = require('path');
+const { JSDOM } = require('jsdom');
+
+const root = path.join(__dirname, '..');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+let failures = 0;
+function assert(cond, msg) {
+  if (cond) console.log('ok - ' + msg);
+  else { failures++; console.error('FAIL - ' + msg); }
+}
+
+async function main() {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const dom = new JSDOM(html, { url: 'https://baby-owl.test/', runScripts: 'outside-only' });
+  const { window } = dom;
+  const { document } = window;
+
+  // Stub the browser APIs jsdom lacks; drive frames manually for determinism.
+  const rafQ = [];
+  window.requestAnimationFrame = cb => { rafQ.push(cb); return rafQ.length; };
+  window.cancelAnimationFrame = () => {};
+  const stage = document.getElementById('stage');
+  stage.createSVGPoint = () => ({ x: 0, y: 0 });
+  stage.getScreenCTM = () => null;
+
+  // One bundle, one eval: the scripts share top-level const/class bindings.
+  const bundle = ['scene.js', 'owls.js', 'stories.js', 'main.js']
+    .map(f => fs.readFileSync(path.join(root, 'js', f), 'utf8'))
+    .join('\n;\n');
+  window.eval(bundle + `
+;window.__test = {
+  olive, pip, puff, Scene, stories, S,
+  runStory, skipStory, playStory,
+  get storyActive() { return storyActive; },
+  get nextTimerSet() { return !!nextTimer; },
+  clearNext() { clearTimeout(nextTimer); }
+};`);
+  const T = window.__test;
+  const { olive, pip, puff } = T;
+
+  let now = window.performance.now();
+  function pump(frames = 1, stepMs = 16) {
+    for (let i = 0; i < frames; i++) {
+      now += stepMs;
+      for (const cb of rafQ.splice(0)) cb(now);
+    }
+  }
+
+  // --- structure ---
+  assert(document.getElementById('owls').children.length === 3, 'three owls on stage');
+  assert([olive.name, pip.name, puff.name].join(',') === 'Olive,Pip,Puff', 'owl names');
+  assert(T.stories.map(s => s.name).join('|') === 'First Flight|Fishing Lesson|Nap Time', 'three stories');
+
+  for (const o of [olive, pip, puff]) {
+    const discs = [...o.bob.querySelectorAll('circle')].filter(c => c.getAttribute('r') === '31');
+    assert(discs.length === 2, o.name + ': two facial discs');
+    for (const [eye, cx] of [[o.eyeL, '-25'], [o.eyeR, '25']]) {
+      const circles = eye.querySelectorAll('circle');
+      assert(circles[0].getAttribute('r') === '24' && circles[0].getAttribute('fill') === '#fffdf5', o.name + ': eye white r24');
+      assert(circles[1].getAttribute('r') === '15.5' && circles[1].getAttribute('fill') === 'url(#irisG)', o.name + ': amber iris r15.5');
+      const pc = eye.querySelector('g').querySelector('circle');
+      assert(pc.getAttribute('cx') === cx && pc.getAttribute('cy') === '-24' && pc.getAttribute('r') === '9', o.name + ': pupil centered at (' + cx + ',-24)');
+    }
+    assert(!!o.beakG.querySelector('path'), o.name + ': beak');
+    assert(!!o.feet.querySelector('path'), o.name + ': feet');
+  }
+
+  // --- layers ---
+  assert(document.getElementById('critters').getAttribute('pointer-events') === 'none', 'critters layer is click-through');
+  assert(document.getElementById('fx').getAttribute('pointer-events') === 'none', 'fx layer is click-through');
+
+  // --- no fg props in front of the trunk (x 1150-1375, y > 640) ---
+  const trunkZone = [];
+  for (const g of document.querySelectorAll('#fg > g')) {
+    const m = (g.getAttribute('transform') || '').match(/translate\(([-\d.]+) ([\d.-]+)/);
+    if (m && +m[1] > 1150 && +m[1] < 1375 && +m[2] > 640) trunkZone.push('g@' + m[1] + ',' + m[2]);
+  }
+  for (const e of document.querySelectorAll('#fg > ellipse')) {
+    const x = +e.getAttribute('cx'), y = +e.getAttribute('cy');
+    if (x > 1150 && x < 1375 && y > 640) trunkZone.push('ellipse@' + x + ',' + y);
+  }
+  assert(trunkZone.length === 0, 'no grass/flowers/mushrooms in front of the trunk ' + JSON.stringify(trunkZone));
+
+  // Stop the boot story timer so it cannot race the tests.
+  T.clearNext();
+
+  // --- hop moves the owl up ---
+  olive.hop(22);
+  pump(10);
+  const tm = olive.g.getAttribute('transform').match(/translate\(([-\d.]+) ([\d.-]+)/);
+  const hopY = parseFloat(tm[2]);
+  assert(hopY < olive.home.y, 'hop moves owl UP (y ' + olive.home.y + ' -> ' + hopY.toFixed(1) + ')');
+  pump(40);
+
+  // --- clicks ---
+  const fx = document.getElementById('fx');
+  let n = fx.children.length;
+  olive.g.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert(fx.children.length > n, 'owl click spawns fx (bubble + hearts)');
+  n = fx.children.length;
+  T.Scene.pondG.dispatchEvent(new window.MouseEvent('click', { bubbles: true, clientX: 400, clientY: 795 }));
+  assert(fx.children.length >= n + 6, 'pond click spawns splash (ripple + 5 drops)');
+
+  // --- stories: skip all three ---
+  for (let i = 0; i < 3; i++) {
+    const p = T.runStory(i);
+    await sleep(150);
+    assert(T.storyActive === true, 'story ' + i + ' (' + T.stories[i].name + ') is active');
+    T.skipStory();
+    await p;
+    assert(T.storyActive === false, 'story ' + i + ' ends after skip');
+    assert(olive.x === olive.home.x && olive.y === olive.home.y &&
+           pip.x === pip.home.x && pip.y === pip.home.y &&
+           puff.x === puff.home.x && puff.y === puff.home.y, 'story ' + i + ': owls back home');
+    assert(olive.lid === 0 && pip.lid === 0 && puff.lid === 0 && !olive.fish, 'story ' + i + ': poses reset');
+    T.clearNext();
+  }
+
+  // --- one story runs to natural completion and reschedules ---
+  const t0 = Date.now();
+  await T.runStory(0);
+  const dur = Date.now() - t0;
+  assert(dur > 8000, 'story 0 runs to completion without skip (~11 s, took ' + (dur / 1000).toFixed(1) + 's)');
+  assert(T.storyActive === false, 'story 0 finished');
+  assert(T.nextTimerSet, 'next story scheduled');
+  assert(olive.x === olive.home.x && pip.x === pip.home.x && puff.x === puff.home.x, 'owls home after natural finish');
+
+  console.log(failures ? '\nSMOKE TEST FAILED (' + failures + ')' : '\nSMOKE TEST PASSED');
+  process.exit(failures ? 1 : 0);
+}
+
+main().catch(err => { console.error(err); process.exit(1); });
