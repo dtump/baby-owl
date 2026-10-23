@@ -24,10 +24,10 @@ step, no assets, no network needed.
 |---|---|
 | `index.html` | SVG stage, gradient defs, UI overlay (buttons, hint), script tags |
 | `css/style.css` | Fullscreen stage, UI pill styling, cursor-idle behavior |
-| `js/scene.js` | Shared helpers (`svgEl`, `cubic`, easing, `mixHex`), background: sky, sun, moon, stars, clouds, hills, ground, tree, pond, grass details, butterflies, leaves, sparkles, fireflies, rain/snow/rainbow; atmosphere clock (day/night, weather, seasons) |
+| `js/scene.js` | Shared helpers (`svgEl`, `cubic`, easing, `mixHex`), background: sky, sun, moon, stars, clouds, hills, ground, tree, pond, grass details, butterflies, leaves, sparkles, fireflies, hedgehog, rain/snow/rainbow; atmosphere clock (day/night, weather, seasons) |
 | `js/owls.js` | `Owl` class: body/wings/eyes/beak/feet built from SVG shapes; per-frame update (blink, gaze tracking, flap, hop, bob, sleepy lids); speech bubbles |
-| `js/stories.js` | Story context `S` (wait/skip, fly paths, splash, fish, zzz, hearts) + the 3 stories as async scripts |
-| `js/main.js` | Boot, rAF loop, mouse/keyboard/click input, story scheduler, WebAudio sound, fullscreen |
+| `js/stories.js` | Story context `S` (wait/skip, fly paths, splash, fish, zzz, hearts, berries, pebbles, constellations, notes) + the 8 stories as async scripts |
+| `js/main.js` | Boot, rAF loop, mouse/keyboard/click input, story scheduler (day rotation + once-per-night night story), WebAudio sound, fullscreen |
 
 SVG layer order (bottom → top): `bg` → `mid` (pond, tree) → `fg` (grass details)
 → `owls` → `critters` → `fx` (bubbles, splashes, zzz, rain/snow, huddle leaf)
@@ -38,6 +38,8 @@ SVG layer order (bottom → top): `bg` → `mid` (pond, tree) → `fg` (grass de
 - **Olive** (parent, brown, scale 1.05) — perched on the big branch at (1120, 393).
 - **Pip** (baby, light tan, scale 0.62) — on the branch at (950, 419).
 - **Puff** (baby, soft grey-blue, scale 0.60) — on a red mushroom at (800, 682).
+- **The hedgehog** — a shy little critter (`Scene.hedgehog`) that waddles in
+  along the shoreline during its story and hides the rest of the time.
 
 Owls are built from layered shapes (body, scalloped belly, ear tufts, facial discs,
 big amber-irised eyes with movable pupils, blush, beak, side wings, feet) so
@@ -45,7 +47,7 @@ animation = transform updates:
 wings rotate around the shoulder, eyes squash for blinks and droop when sleepy,
 pupils track the mouse, the whole body bobs (breathing) and hops.
 
-## The three stories (rotate automatically, ~12–18 s idle gap)
+## The eight stories (rotate automatically, ~12–18 s idle gap)
 
 1. **First Flight** — Pip hops, flaps excitedly, glides from the branch to a stub
    near the trunk while Olive watches, then flies back. Proud hoots, happy wiggles.
@@ -54,10 +56,25 @@ pupils track the mouse, the whole body bobs (breathing) and hops.
    snack. Then Puff tries, gets a big splash and no fish, and Olive cheers anyway.
 3. **Nap Time** — Olive yawns and "tells a story", both babies' eyes droop, `z`
    floats up, a butterfly lands on Olive's head. Gentle wake-up stretch.
+4. **Bath Time** — the babies fly to the shallows at the pond's near edge and
+   splash about (hops + splashes) while Olive supervises from the branch.
+5. **The New Friend** — a shy hedgehog waddles in along the shoreline; Pip flies
+   down to greet it, Puff shares a berry, and everyone waves goodbye as it
+   waddles off (turning around first).
+6. **Lost & Found** — Pip drops a shiny pebble from the branch (gravity fall,
+   bounce, glint), Puff searches the grass, spots it, and returns it — Pip is
+   delighted, Olive is proud.
+7. **Constellation Lesson** *(night story — plays once per night)* — the owls
+   look up as the stars draw an owl in the sky, twinkle, and fade; the babies
+   gasp, then everyone tucks back in.
+8. **Band Practice** — the three owls hoot a little melody (low, mid, high, then
+   a chord) with floating ♪ notes and a group bow.
 
 Stories are async functions using `await S.wait(ms)`; **Space** (or clicking the
 background) skips the current story — waits reject with a `SKIP` sentinel and the
-runner restores everyone to their home pose. Keys **1/2/3** jump to a story.
+runner restores everyone to their home pose (and hides the hedgehog). Keys
+**1–8** jump to a story. Day stories rotate automatically; the night story plays
+once per night when the owls would otherwise sleep.
 
 ## Ambient life (always running)
 
@@ -78,7 +95,8 @@ The world lives on a clock: one full day/night cycle every 3 minutes
   warms the scene at dusk and darkens it at night.
 - **Sleep** — at night (`Scene.isNight()`) the owls stay home, eyes droop
   shut, breathing deepens and `z`s float up; the story scheduler (`tryStart`)
-  waits out the night and re-checks every 8 s. Manual story keys still work —
+  plays the night story (Constellation Lesson) once per night, then waits out
+  the rest of the night, re-checking every 8 s. Manual story keys still work —
   the owls wake for the show. Idle emotes pause while asleep or huddled.
 - **Weather** — clear → rain (snow in winter) → rainbow (after rain) →
   clear (`Scene.weather`, `nextWeather`). Rain streaks fall in the `fx`
@@ -98,7 +116,7 @@ The world lives on a clock: one full day/night cycle every 3 minutes
 - **Click an owl** — hop + "Hoo!" bubble + heart.
 - **Click the pond** — splash + ripples.
 - **Click the background** — skip the current story.
-- **Keys** — `1/2/3` story, `Space` skip, `F` fullscreen, `M` sound.
+- **Keys** — `1`–`8` story, `Space` skip, `F` fullscreen, `M` sound.
 - **Buttons** — sound toggle (WebAudio, default off), fullscreen.
 - Subtle mouse parallax on clouds and hills.
 

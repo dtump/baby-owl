@@ -18,3 +18,11 @@ First brainstorm about how you can implement this. Make a design document and ta
 ## 2026-10-23 — Prompt 2
 
 Pick up the Atmosphere items from your backlog
+
+---
+
+## 2026-10-23 — Prompt 3
+
+Minor visual fix needed: the wooden log is sitting on top of the mushroom.
+
+Then work on the "More stories" items in your backlog
