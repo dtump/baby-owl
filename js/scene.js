@@ -272,11 +272,9 @@ const Scene = {
       svgEl('circle', { cx: 34, cy: -44, r: 6, fill: '#fff', opacity: .9 }, g);
       return g;
     };
-    this.mushroomBig = mushroom(800, 780, 1);
-    mushroom(1080, 860, .6);
-    mushroom(185, 868, .5);
+    this.mushrooms = [mushroom(800, 780, 1), mushroom(1100, 888, .55), mushroom(185, 868, .5)];
 
-    const log = svgEl('g', { transform: 'translate(1050 818) rotate(-5)' }, fg);
+    const log = this.logG = svgEl('g', { transform: 'translate(1050 818) rotate(-5)' }, fg);
     svgEl('rect', { x: -75, y: -18, width: 150, height: 36, rx: 18, fill: '#8a5a33', stroke: '#6e4423', 'stroke-width': 3 }, log);
     svgEl('ellipse', { cx: -72, cy: 0, rx: 11, ry: 16, fill: '#d9b98a', stroke: '#b5906a', 'stroke-width': 2 }, log);
     svgEl('ellipse', { cx: -72, cy: 0, rx: 5, ry: 8, fill: 'none', stroke: '#b5906a', 'stroke-width': 2 }, log);

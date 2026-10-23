@@ -87,6 +87,19 @@ async function main() {
   }
   assert(trunkZone.length === 0, 'no grass/flowers/mushrooms in front of the trunk ' + JSON.stringify(trunkZone));
 
+  // --- props must not overlap: the log must not sit on a mushroom ---
+  function boxOf(g, x0, x1, y0, y1) {
+    const m = (g.getAttribute('transform') || '').match(/translate\(([-\d.]+) ([-\d.]+)\)(?: scale\(([\d.]+)\))?/);
+    const x = +m[1], y = +m[2], s = m[3] ? +m[3] : 1;
+    return { x0: x + x0 * s, x1: x + x1 * s, y0: y + y0 * s, y1: y + y1 * s };
+  }
+  const logBox = boxOf(T.Scene.logG, -83, 83, -26, 26);
+  const shroomOverlap = T.Scene.mushrooms.some(g => {
+    const b = boxOf(g, -58, 58, -72, 2);
+    return b.x0 < logBox.x1 && b.x1 > logBox.x0 && b.y0 < logBox.y1 && b.y1 > logBox.y0;
+  });
+  assert(!shroomOverlap, 'log does not sit on a mushroom');
+
   // Stop the boot story timer so it cannot race the tests.
   T.clearNext();
 
