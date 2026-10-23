@@ -4,6 +4,26 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const easeIO = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const ramp01 = (x, a, b) => clamp((x - a) / (b - a), 0, 1);
+const hexRGB = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mixHex = (a, b, t) => {
+  const A = hexRGB(a), B = hexRGB(b);
+  return 'rgb(' + A.map((v, i) => Math.round(lerp(v, B[i], t))).join(',') + ')';
+};
+const SKY = {
+  day: ['#7ec8ff', '#bfe9ff', '#eafcff'],
+  dusk: ['#ff9e6d', '#ffc9a0', '#ffe9d2'],
+  night: ['#1b2447', '#2b3a6b', '#46548c'],
+  dawn: ['#f2a2b8', '#ffc7b0', '#ffe4d6']
+};
+function skyPalette(dayT) {
+  if (dayT < .42) return SKY.day;
+  if (dayT < .55) return SKY.day.map((c, i) => mixHex(c, SKY.dusk[i], ramp01(dayT, .42, .55)));
+  if (dayT < .70) return SKY.dusk.map((c, i) => mixHex(c, SKY.night[i], ramp01(dayT, .55, .70)));
+  if (dayT < .88) return SKY.night;
+  if (dayT < .94) return SKY.night.map((c, i) => mixHex(c, SKY.dawn[i], ramp01(dayT, .88, .94)));
+  return SKY.dawn.map((c, i) => mixHex(c, SKY.day[i], ramp01(dayT, .94, 1)));
+}
 
 function svgEl(name, attrs, parent) {
   const n = document.createElementNS(NS, name);
@@ -23,9 +43,12 @@ function cubic(p0, c1, c2, p1, t) {
 
 const Scene = {
   clouds: [], birds: [], ripples: [], tufts: [], flowers: [], reeds: [],
-  butterflies: [], leaves: [], sparkles: [],
+  butterflies: [], leaves: [], sparkles: [], fireflies: [], stars: [],
   parallax: { x: 0, y: 0 },
   leafTimer: 3,
+  dayMs: 180000,
+  dayT: .15,
+  night: 0,
 
   build() {
     const bg = document.getElementById('bg');
@@ -38,6 +61,19 @@ const Scene = {
     svgEl('circle', { r: 72, fill: 'url(#sunG)' }, sun);
     svgEl('circle', { r: 72, fill: 'none', stroke: '#ffca3a', 'stroke-width': 5, opacity: .5 }, sun);
     this.sun = sun;
+
+    const moon = svgEl('g', { transform: 'translate(1380 150)', opacity: 0 }, bg);
+    svgEl('circle', { r: 54, fill: '#fdf6d8', opacity: .25 }, moon);
+    svgEl('circle', { r: 38, fill: '#f7efd0' }, moon);
+    svgEl('circle', { cx: -10, cy: -8, r: 7, fill: '#e8dfb8', opacity: .6 }, moon);
+    svgEl('circle', { cx: 12, cy: 10, r: 5, fill: '#e8dfb8', opacity: .5 }, moon);
+    this.moon = moon;
+
+    this.starsG = svgEl('g', { opacity: 0 }, bg);
+    for (let i = 0; i < 36; i++) {
+      const g = svgEl('circle', { cx: rand(30, 1570), cy: rand(15, 380), r: rand(1, 2.2), fill: '#ffffff' }, this.starsG);
+      this.stars.push({ g, ph: rand(0, 6) });
+    }
 
     this.cloudsG = svgEl('g', {}, bg);
     for (const c of [
@@ -55,10 +91,16 @@ const Scene = {
     }
 
     this.hillsG = svgEl('g', {}, bg);
-    svgEl('path', { d: 'M-30,560 C250,470 450,520 700,500 C950,480 1150,540 1400,500 C1500,485 1560,495 1630,490 L1630,900 L-30,900 Z', fill: '#a9dd7f' }, this.hillsG);
-    svgEl('path', { d: 'M-30,620 C200,560 420,600 650,585 C900,568 1100,620 1350,590 C1450,578 1540,585 1630,580 L1630,900 L-30,900 Z', fill: '#8ccf63' }, this.hillsG);
+    this.hillEls = [
+      svgEl('path', { d: 'M-30,560 C250,470 450,520 700,500 C950,480 1150,540 1400,500 C1500,485 1560,495 1630,490 L1630,900 L-30,900 Z', fill: '#a9dd7f' }, this.hillsG),
+      svgEl('path', { d: 'M-30,620 C200,560 420,600 650,585 C900,568 1100,620 1350,590 C1450,578 1540,585 1630,580 L1630,900 L-30,900 Z', fill: '#8ccf63' }, this.hillsG)
+    ];
 
     svgEl('path', { d: 'M0,662 C300,632 600,657 900,647 C1200,637 1400,657 1600,647 L1600,900 L0,900 Z', fill: 'url(#grass)' }, bg);
+
+    this.skyStops = [...document.querySelectorAll('#sky stop')];
+    this.grassStops = [...document.querySelectorAll('#grass stop')];
+    this.tint = document.getElementById('tint');
 
     this.buildMid();
     this.buildFg();
@@ -208,6 +250,12 @@ const Scene = {
       s.baseX = parseFloat(g.getAttribute('cx'));
       s.baseY = parseFloat(g.getAttribute('cy'));
     }
+    for (let i = 0; i < 9; i++) {
+      const g = svgEl('g', { opacity: 0 }, crit);
+      svgEl('circle', { r: 7, fill: '#eaff9e', opacity: .22 }, g);
+      svgEl('circle', { r: 2.6, fill: '#f4ffb0' }, g);
+      this.fireflies.push({ g, bx: rand(80, 1520), by: rand(470, 820), rx: rand(50, 130), ry: rand(25, 60), sp: rand(.25, .6), ph: rand(0, 6), x: 0, y: 0 });
+    }
   },
 
   makeButterfly(b) {
@@ -250,8 +298,38 @@ const Scene = {
     this.leaves.push({ g, bx, by, x: 0, y: 0, vx: rand(-30, 30), vy: rand(45, 75), rot: rand(0, 360), vr: rand(-160, 160), ph: rand(0, 6) });
   },
 
+  isNight() {
+    return this.dayT >= .56 && this.dayT < .86;
+  },
+
+  updateSky(t) {
+    const pal = skyPalette(this.dayT);
+    for (let i = 0; i < 3; i++) this.skyStops[i].setAttribute('stop-color', pal[i]);
+    const sunT = clamp(((this.dayT - .88 + 1) % 1) / .67, 0, 1);
+    const sunA = Math.sin(sunT * Math.PI);
+    this.sun.setAttribute('transform', `translate(${lerp(120, 1480, sunT).toFixed(1)} ${(215 - sunA * 150).toFixed(1)})`);
+    this.sun.setAttribute('opacity', (sunA * (1 - this.night * .85)).toFixed(3));
+    const mp = clamp((this.dayT - .55) / .33, 0, 1);
+    this.moon.setAttribute('transform', `translate(${lerp(1380, 220, mp).toFixed(1)} ${(150 - Math.sin(mp * Math.PI) * 85).toFixed(1)})`);
+    this.moon.setAttribute('opacity', this.night.toFixed(3));
+    this.starsG.setAttribute('opacity', this.night.toFixed(3));
+    for (const s of this.stars) s.g.setAttribute('opacity', (.35 + .65 * Math.abs(Math.sin(t * 1.7 + s.ph))).toFixed(2));
+    for (const f of this.fireflies) {
+      f.x = f.bx + Math.sin(t * f.sp + f.ph) * f.rx;
+      f.y = f.by + Math.sin(t * f.sp * 1.4 + f.ph * 2) * f.ry;
+      f.g.setAttribute('transform', `translate(${f.x.toFixed(1)} ${f.y.toFixed(1)})`);
+      f.g.setAttribute('opacity', (this.night * (.25 + .75 * Math.abs(Math.sin(t * 2.4 + f.ph)))).toFixed(2));
+    }
+    const duskWarm = ramp01(this.dayT, .40, .52) * (1 - ramp01(this.dayT, .55, .65));
+    this.tint.setAttribute('fill', mixHex('#ffb46d', '#141d3d', this.night));
+    this.tint.setAttribute('opacity', (duskWarm * .14 + this.night * .45).toFixed(3));
+  },
+
   update(dt, t) {
     const k = 1 - Math.exp(-dt * 4);
+    this.dayT = (this.dayT + dt * 1000 / this.dayMs) % 1;
+    this.night = ramp01(this.dayT, .48, .60) * (1 - ramp01(this.dayT, .82, .94));
+    this.updateSky(t);
     this.parallax.x += ((this.parallax.tx || 0) - this.parallax.x) * k;
     this.parallax.y += ((this.parallax.ty || 0) - this.parallax.y) * k;
     this.cloudsG.setAttribute('transform', `translate(${this.parallax.x * 16} ${this.parallax.y * 7})`);
@@ -304,6 +382,7 @@ const Scene = {
         bf.y = pathY;
       }
       bf.g.setAttribute('transform', `translate(${bf.x} ${bf.y})`);
+      bf.g.setAttribute('opacity', (1 - this.night).toFixed(2));
       bf.wl.setAttribute('transform', `rotate(${flap})`);
       bf.wr.setAttribute('transform', `rotate(${-flap})`);
     }
@@ -334,6 +413,7 @@ const Scene = {
       }
       s.g.setAttribute('cx', s.baseX + Math.sin(t * .8 + s.ph) * 26);
       s.g.setAttribute('cy', s.baseY + s.y);
+      s.g.setAttribute('opacity', ((1 - this.night) * .55).toFixed(2));
     }
   }
 };

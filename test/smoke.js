@@ -36,7 +36,7 @@ async function main() {
   window.eval(bundle + `
 ;window.__test = {
   olive, pip, puff, Scene, stories, S,
-  runStory, skipStory, playStory,
+  runStory, skipStory, playStory, tryStart,
   get storyActive() { return storyActive; },
   get nextTimerSet() { return !!nextTimer; },
   clearNext() { clearTimeout(nextTimer); }
@@ -130,6 +130,43 @@ async function main() {
   assert(T.storyActive === false, 'story 0 finished');
   assert(T.nextTimerSet, 'next story scheduled');
   assert(olive.x === olive.home.x && pip.x === pip.home.x && puff.x === puff.home.x, 'owls home after natural finish');
+  T.clearNext();
+
+  // --- atmosphere: day/night cycle ---
+  const skyStop = document.querySelector('#sky stop');
+  T.Scene.dayT = .2;
+  pump(3);
+  const daySky = skyStop.getAttribute('stop-color');
+  assert(T.Scene.night === 0 && !T.Scene.isNight(), 'midday: night factor 0');
+  assert(+T.Scene.sun.getAttribute('opacity') > .9, 'sun is up at midday');
+  T.Scene.dayT = .72;
+  pump(3);
+  assert(T.Scene.night === 1 && T.Scene.isNight(), 'night: night factor 1');
+  assert(skyStop.getAttribute('stop-color') !== daySky, 'sky color changes day -> night');
+  assert(+T.Scene.tint.getAttribute('opacity') > .3, 'night tint darkens the scene');
+  assert(+T.Scene.starsG.getAttribute('opacity') === 1, 'stars out at night');
+  assert(+T.Scene.moon.getAttribute('opacity') === 1, 'moon out at night');
+  assert(+T.Scene.sun.getAttribute('opacity') < .05, 'sun hidden at night');
+
+  pump(240);
+  assert(olive.lid > .9 && pip.lid > .9 && puff.lid > .9, 'owls fall asleep at night');
+  T.Scene.dayT = .2;
+  pump(240);
+  assert(olive.lid < .1 && pip.lid < .1 && puff.lid < .1, 'owls wake up in the morning');
+
+  T.Scene.dayT = .72;
+  T.clearNext();
+  T.tryStart();
+  assert(T.storyActive === false, 'no story starts while the owls sleep');
+  assert(T.nextTimerSet, 'scheduler re-checks after night');
+  T.clearNext();
+  T.Scene.dayT = .2;
+  T.tryStart();
+  await sleep(150);
+  assert(T.storyActive === true, 'story starts in the daytime');
+  T.skipStory();
+  await sleep(120);
+  T.clearNext();
 
   console.log(failures ? '\nSMOKE TEST FAILED (' + failures + ')' : '\nSMOKE TEST PASSED');
   process.exit(failures ? 1 : 0);

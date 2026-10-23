@@ -24,6 +24,7 @@ class Owl {
     this.lookWorld = null;
     this.blinkTimer = rand(2, 5);
     this.blinkPhase = 0;
+    this.zzzTimer = rand(2.5, 5);
     this.hopTime = 0;
     this.hopDur = 0;
     this.hopH = 0;
@@ -232,6 +233,7 @@ class Owl {
     this.look = { x: 0, y: 0 };
     this.blinkPhase = 0;
     this.blinkTimer = rand(2, 5);
+    this.zzzTimer = rand(2.5, 5);
     if (this.fish) {
       this.fish.remove();
       this.fish = null;

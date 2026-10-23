@@ -68,6 +68,22 @@ function resetPoses() {
   Scene.releaseButterfly(Scene.butterflies[0]);
 }
 
+function updateRest(dt) {
+  if (storyActive) return;
+  const night = Scene.isNight();
+  for (const o of allOwls) {
+    o.lid += ((night ? 1 : 0) - o.lid) * (1 - Math.exp(-dt * 2));
+    o.bobAmp += ((night ? 3.6 : 2.5) - o.bobAmp) * (1 - Math.exp(-dt * 2));
+    if (night) {
+      o.zzzTimer -= dt;
+      if (o.zzzTimer <= 0) {
+        S.zzz(o, 2400);
+        o.zzzTimer = rand(2.6, 5);
+      }
+    }
+  }
+}
+
 async function runStory(i) {
   skipStory();
   const token = ++storyToken;
@@ -87,9 +103,17 @@ async function runStory(i) {
   }
 }
 
+function tryStart() {
+  if (Scene.isNight()) {
+    nextTimer = setTimeout(tryStart, 8000);
+    return;
+  }
+  runStory(storyIdx++ % stories.length);
+}
+
 function scheduleNext() {
   clearTimeout(nextTimer);
-  nextTimer = setTimeout(() => runStory(storyIdx++ % stories.length), rand(12000, 18000));
+  nextTimer = setTimeout(tryStart, rand(12000, 18000));
 }
 
 function skipStory() {
@@ -196,7 +220,7 @@ window.addEventListener('keydown', e => {
 });
 
 setInterval(() => {
-  if (storyActive || Math.random() < .55) return;
+  if (storyActive || Scene.isNight() || Math.random() < .55) return;
   const o = allOwls[Math.floor(Math.random() * allOwls.length)];
   const act = Math.random();
   if (act < .35) {
@@ -222,6 +246,7 @@ function frame(now) {
   last = now;
   const t = now / 1000;
   Scene.update(dt, t);
+  updateRest(dt, t);
   for (const o of allOwls) o.update(dt, t);
   for (let i = fxItems.length - 1; i >= 0; i--) {
     const it = fxItems[i];
@@ -247,4 +272,4 @@ function frame(now) {
 
 wake();
 requestAnimationFrame(frame);
-nextTimer = setTimeout(() => runStory(0), 3500);
+nextTimer = setTimeout(tryStart, 3500);
