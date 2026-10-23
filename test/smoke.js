@@ -202,6 +202,35 @@ async function main() {
   T.Scene.weather = 'clear';
   T.Scene.weatherTimer = 999;
 
+  // --- seasons ---
+  const leaf0 = T.Scene.foliage.main[0].el;
+  T.Scene.dayCount = 1;
+  pump(2);
+  const summerFill = leaf0.getAttribute('fill');
+  T.Scene.dayCount = 2;
+  pump(2);
+  assert(leaf0.getAttribute('fill') !== summerFill, 'foliage changes color with the seasons');
+  T.Scene.dayCount = 3;
+  pump(2);
+  assert(+T.Scene.canopyG.getAttribute('opacity') < .5, 'canopy thins out in winter');
+  assert(+T.Scene.snowGround.getAttribute('opacity') > .2, 'snow blankets the ground in winter');
+  T.Scene.dayCount = 0;
+  pump(90);
+  assert(+T.Scene.blossomG.getAttribute('opacity') > .8, 'blossom in spring');
+  T.Scene.dayCount = 3;
+  pump(2);
+  T.Scene.weather = 'clear';
+  T.Scene.weatherTimer = .01;
+  pump(2);
+  assert(T.Scene.weather === 'snow', 'winter precipitation is snow');
+  pump(120);
+  assert(+T.Scene.snowLayer.getAttribute('opacity') > .8, 'snow falls in winter');
+  assert(+T.Scene.rainLayer.getAttribute('opacity') < .05, 'no rain in winter');
+  T.Scene.weather = 'clear';
+  T.Scene.weatherTimer = 999;
+  T.Scene.dayCount = 1;
+  pump(2);
+
   console.log(failures ? '\nSMOKE TEST FAILED (' + failures + ')' : '\nSMOKE TEST PASSED');
   process.exit(failures ? 1 : 0);
 }

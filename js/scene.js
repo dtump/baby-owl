@@ -54,6 +54,11 @@ const Scene = {
   rainFade: 0, snowFade: 0, rainbowFade: 0,
   rainRipTimer: 0,
   huddle: 0,
+  seasonDays: 1,
+  dayCount: 1,
+  season: 1,
+  blossomOp: 0,
+  foliage: { main: [], light: [], berries: [] },
 
   build() {
     const bg = document.getElementById('bg');
@@ -105,7 +110,9 @@ const Scene = {
     for (const [r, c] of [[335, '#ff8a80'], [317, '#ffcc80'], [299, '#fff59d'], [281, '#a5d6a7']])
       svgEl('path', { d: `M${800 - r},655 A${r},${r} 0 0 1 ${800 + r},655`, fill: 'none', stroke: c, 'stroke-width': 15, 'stroke-linecap': 'round', opacity: .8 }, this.rainbowG);
 
-    svgEl('path', { d: 'M0,662 C300,632 600,657 900,647 C1200,637 1400,657 1600,647 L1600,900 L0,900 Z', fill: 'url(#grass)' }, bg);
+    const grassD = 'M0,662 C300,632 600,657 900,647 C1200,637 1400,657 1600,647 L1600,900 L0,900 Z';
+    svgEl('path', { d: grassD, fill: 'url(#grass)' }, bg);
+    this.snowGround = svgEl('path', { d: grassD, fill: '#ffffff', opacity: 0 }, bg);
 
     this.skyStops = [...document.querySelectorAll('#sky stop')];
     this.grassStops = [...document.querySelectorAll('#grass stop')];
@@ -202,20 +209,30 @@ const Scene = {
     svgEl('line', { x1: 0, y1: 9, x2: 0, y2: 17, stroke: '#5f3d22', 'stroke-width': 3.5, 'stroke-linecap': 'round' }, bh);
 
     const canopy = svgEl('g', {}, tree);
-    const blob = (x, y, r, f) => svgEl('circle', { cx: x, cy: y, r, fill: f }, canopy);
+    this.canopyG = canopy;
+    this.foliage = { main: [], light: [], berries: [] };
+    const blob = (x, y, r, f) => {
+      const c = svgEl('circle', { cx: x, cy: y, r, fill: f }, canopy);
+      this.foliage.main.push({ el: c, base: f });
+    };
     blob(1265, 295, 155, '#4fae5f');
     blob(1115, 350, 100, '#58b96a');
     blob(1410, 345, 105, '#58b96a');
     blob(1175, 235, 95, '#63c273');
     blob(1355, 230, 90, '#63c273');
     blob(1265, 195, 85, '#6fc97e');
-    svgEl('circle', { cx: 1210, cy: 250, r: 40, fill: '#8ad694', opacity: .55 }, canopy);
-    svgEl('circle', { cx: 1330, cy: 290, r: 34, fill: '#8ad694', opacity: .45 }, canopy);
-    svgEl('circle', { cx: 1150, cy: 320, r: 26, fill: '#8ad694', opacity: .45 }, canopy);
+    for (const [cx, cy, r, op] of [[1210, 250, 40, .55], [1330, 290, 34, .45], [1150, 320, 26, .45]]) {
+      const c = svgEl('circle', { cx, cy, r, fill: '#8ad694', opacity: op }, canopy);
+      this.foliage.light.push({ el: c, base: '#8ad694' });
+    }
     for (const a of [[1180, 300], [1330, 330], [1265, 240]]) {
-      svgEl('circle', { cx: a[0], cy: a[1], r: 9, fill: '#ff5d5d' }, canopy);
+      const c = svgEl('circle', { cx: a[0], cy: a[1], r: 9, fill: '#ff5d5d' }, canopy);
+      this.foliage.berries.push({ el: c, base: '#ff5d5d' });
       svgEl('path', { d: `M${a[0] + 2},${a[1] - 9} q8,-8 14,-4`, stroke: '#2f7d3c', 'stroke-width': 3, fill: 'none', 'stroke-linecap': 'round' }, canopy);
     }
+    this.blossomG = svgEl('g', { opacity: 0 }, canopy);
+    for (let i = 0; i < 16; i++)
+      svgEl('circle', { cx: rand(1100, 1430), cy: rand(160, 360), r: rand(4, 7), fill: Math.random() > .5 ? '#ffd1e8' : '#ffb7d5' }, this.blossomG);
   },
 
   buildFg() {
@@ -365,7 +382,7 @@ const Scene = {
 
   nextWeather() {
     if (this.weather === 'clear') {
-      this.weather = 'rain';
+      this.weather = this.season === 3 ? 'snow' : 'rain';
       this.weatherTimer = rand(25, 40);
     } else if (this.weather === 'rain') {
       this.weather = 'rainbow';
@@ -427,12 +444,41 @@ const Scene = {
     }
   },
 
+  updateSeason(dt) {
+    const F = [
+      { tint: '#9fe08a', mix: .5, hill: ['#c9ec9a', .35], grass: ['#a5e06a', .3], blossom: 1, canopy: 1, snow: 0 },
+      { tint: '#4fae5f', mix: 0, hill: ['#c9ec9a', 0], grass: ['#a5e06a', 0], blossom: 0, canopy: 1, snow: 0 },
+      { tint: '#e08a2e', mix: .85, hill: ['#e8c25a', .5], grass: ['#d9a83f', .45], blossom: 0, canopy: 1, snow: 0 },
+      { tint: '#8a7a5f', mix: .9, hill: ['#cfd8dc', .55], grass: ['#aebfc4', .5], blossom: 0, canopy: .3, snow: .35 }
+    ][this.season];
+    for (const c of this.foliage.main) c.el.setAttribute('fill', mixHex(c.base, F.tint, F.mix));
+    for (const c of this.foliage.light) c.el.setAttribute('fill', mixHex(c.base, F.tint, F.mix * .8));
+    const berryMix = this.season === 0 ? .95 : this.season === 2 ? .4 : 0;
+    const berryTint = this.season === 0 ? '#ff9ec7' : '#d94f2e';
+    for (const c of this.foliage.berries) {
+      c.el.setAttribute('fill', mixHex(c.base, berryTint, berryMix));
+      c.el.setAttribute('opacity', this.season === 3 ? 0 : 1);
+    }
+    this.canopyG.setAttribute('opacity', F.canopy);
+    this.blossomOp += (F.blossom - this.blossomOp) * (1 - Math.exp(-dt * 1.5));
+    this.blossomG.setAttribute('opacity', this.blossomOp.toFixed(3));
+    this.hillEls[0].setAttribute('fill', mixHex('#a9dd7f', F.hill[0], F.hill[1]));
+    this.hillEls[1].setAttribute('fill', mixHex('#8ccf63', F.hill[0], F.hill[1]));
+    this.grassStops[0].setAttribute('stop-color', mixHex('#7ed957', F.grass[0], F.grass[1]));
+    this.grassStops[1].setAttribute('stop-color', mixHex('#3fa34d', F.grass[0], F.grass[1]));
+    this.snowGround.setAttribute('opacity', F.snow);
+  },
+
   update(dt, t) {
     const k = 1 - Math.exp(-dt * 4);
+    const prev = this.dayT;
     this.dayT = (this.dayT + dt * 1000 / this.dayMs) % 1;
+    if (this.dayT < prev) this.dayCount++;
+    this.season = Math.floor(this.dayCount / this.seasonDays) % 4;
     this.night = ramp01(this.dayT, .48, .60) * (1 - ramp01(this.dayT, .82, .94));
     this.updateSky(t);
     this.updateWeather(dt, t);
+    this.updateSeason(dt);
     this.parallax.x += ((this.parallax.tx || 0) - this.parallax.x) * k;
     this.parallax.y += ((this.parallax.ty || 0) - this.parallax.y) * k;
     this.cloudsG.setAttribute('transform', `translate(${this.parallax.x * 16} ${this.parallax.y * 7})`);
@@ -491,8 +537,17 @@ const Scene = {
     }
     this.leafTimer -= dt;
     if (this.leafTimer <= 0) {
-      this.leafTimer = rand(3.5, 7);
-      this.spawnLeaf();
+      if (this.season === 3) this.leafTimer = rand(9, 15);
+      else if (this.season === 0) {
+        this.leafTimer = rand(2, 4);
+        this.spawnLeaf('spring');
+      } else if (this.season === 1) {
+        this.leafTimer = rand(7, 11);
+        this.spawnLeaf('summer');
+      } else {
+        this.leafTimer = rand(1.6, 3.2);
+        this.spawnLeaf('autumn');
+      }
     }
     for (let i = this.leaves.length - 1; i >= 0; i--) {
       const l = this.leaves[i];
