@@ -36,7 +36,7 @@ async function main() {
   window.eval(bundle + `
  ;window.__test = {
     olive, pip, puff, Scene, stories, S, POS, OWL_FEET, HEDGEHOG_SCALE,
-    runStory, skipStory, playStory, tryStart,
+    runStory, skipStory, playStory, tryStart, swingRide, abortSwing,
     get storyActive() { return storyActive; },
     get storyNow() { return storyNow; },
     get nextTimerSet() { return !!nextTimer; },
@@ -172,6 +172,7 @@ async function main() {
 
   // Stop the boot story timer so it cannot race the tests.
   T.clearNext();
+  T.swingRide.timer = 1e9; // park the swing ride; the swing test drives it explicitly
 
   // --- debug overlay (G) ---
   const debugLayer = document.getElementById('debug');
@@ -196,6 +197,79 @@ async function main() {
   window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'G' }));
   assert(T.Scene.debug === false && debugLayer.children.length === 0, 'G again hides the overlay');
   pump(40);
+
+  // --- critters & world ---
+  // frog hops between lily pads and croaks
+  const frog = T.Scene.frog;
+  assert(!!frog && frog.g.parentNode === document.getElementById('critters'), 'frog lives in the critters layer');
+  assert(frog.pads.every(([x, y]) => inRect({ x, y }, T.Scene.safeArea) && !uiHit({ x, y })), 'frog pads are in the safe area');
+  frog.timer = .01;
+  pump(2);
+  assert(frog.hopping === true, 'frog hops between pads');
+  const pad0 = frog.pad;
+  pump(60);
+  assert(frog.hopping === false && frog.pad !== pad0, 'frog lands on the other pad');
+  assert(frog.croaks > 0, 'frog croaks on landing (bubble + sound)');
+
+  // squirrel runs the branch and chatters at Pip
+  const sq = T.Scene.squirrel;
+  assert(!!sq && sq.g.parentNode === T.Scene.treeG, 'squirrel lives in the tree layer (behind the owls)');
+  const sx0 = sq.x;
+  pump(30);
+  assert(Math.abs(sq.x - sx0) > 10, 'squirrel runs along the branch');
+  sq.chatTimer = .01;
+  sq.x = 1050;
+  pump(2);
+  assert(sq.chatting === true && sq.chatters > 0, 'squirrel stops to chatter at Pip');
+  pump(120);
+  assert(sq.chatting === false, 'squirrel resumes running after chatting');
+
+  // beehive + bees + honey
+  assert(!!T.Scene.hive && T.Scene.hive.g.parentNode === T.Scene.treeG, 'beehive hangs from the tree');
+  assert(T.Scene.bees.length === 4 && T.Scene.bees.every(b => b.g.parentNode === document.getElementById('critters')), 'bees loop around the hive');
+  const bx0 = T.Scene.bees[0].g.getAttribute('transform');
+  pump(30);
+  assert(T.Scene.bees[0].g.getAttribute('transform') !== bx0, 'bees move');
+  T.Scene.dripTimer = .01;
+  pump(2);
+  assert(!!document.querySelector('#fx circle[fill="#ffc233"]'), 'honey drips from the hive');
+  await sleep(1300); // fx lifecycles run on real time
+  pump(2);
+  assert(!document.querySelector('#fx circle[fill="#ffc233"]'), 'honey drip falls and fades');
+
+  // shooting star at night
+  T.Scene.dayT = .72;
+  T.Scene.starTimer = .01;
+  pump(2);
+  assert(T.Scene.shootingStars.length > 0, 'shooting star streaks at night');
+  pump(70);
+  assert(T.Scene.shootingStars.length === 0, 'shooting star fades away');
+  T.Scene.dayT = .2;
+
+  // the swing: hangs from the branch, sways, and Pip learns to ride it
+  const sw = T.Scene.swing;
+  assert(!!sw && sw.g.parentNode === T.Scene.treeG, 'swing hangs from the branch in the tree layer');
+  const seat0 = T.Scene.swingSeat();
+  assert(seat0.y > sw.pivot.y && Math.abs(seat0.x - sw.pivot.x) < 30, 'swing seat hangs below the pivot');
+  assert(inRect(seat0, T.Scene.safeArea), 'swing seat is in the safe area');
+  let travel = 0;
+  let prevSeat = T.Scene.swingSeat();
+  for (let i = 0; i < 120; i++) {
+    pump(1);
+    const cur = T.Scene.swingSeat();
+    travel += Math.abs(cur.x - prevSeat.x) + Math.abs(cur.y - prevSeat.y);
+    prevSeat = cur;
+  }
+  assert(travel > 5, 'swing sways on its own (' + travel.toFixed(1) + 'px of seat travel)');
+  T.swingRide.timer = .01;
+  pump(2);
+  await sleep(250);
+  assert(T.swingRide.active === true, 'swing ride starts in daytime idle');
+  assert(T.Scene.swing.rider === pip && pip.pinned === true, 'Pip rides the swing');
+  T.abortSwing();
+  assert(pip.pinned === false && T.Scene.swing.rider === null, 'abortSwing releases Pip');
+  assert(pip.x === pip.home.x && pip.y === pip.home.y, 'aborted ride snaps Pip home');
+  T.swingRide.timer = 1e9; // park it for the rest of the test
 
   // --- hop moves the owl up ---
   olive.hop(22);
