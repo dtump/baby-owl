@@ -24,6 +24,7 @@
 - [x] Alignment tooling: single-source geometry (`Scene.pond` + `pondEdgeY`/`inPond`/`pondShallow`, `OWL_FEET` + `owl.feetY()`, `Scene.keepClear`), `G` debug overlay, smoke-test geometry contract
 - [x] Visual fix: bath owls stand IN the pond (feet 12px inside the near edge; spots derived via `Scene.pondShallow`, splashes at the feet)
 - [x] Visual fix: hedgehog barely visible + cut off (sat at the bottom edge behind the hint pill); now bigger (scale 1.3) with a shadow, at the pond's right shore; `Scene.safeArea`/`Scene.uiZones` contract keeps story action visible (also moved Pip's visit, the pebble and Puff's search spots up)
+- [x] Critters & world: frog (hops the lily pads, croaks "ribbit!"), squirrel (runs the branch, chatters at Pip), beehive + looping bees + honey drips, shooting stars at night, swing on the branch with a daytime Pip ride
 
 ## Story beats (as implemented)
 
@@ -80,6 +81,10 @@ skips.
 | Puff find (search) | 900 | 780 | left of pebble |
 | Puff give (branch) | 1005 | 421 | handoff to Pip |
 | Constellation center | 430 | 185 | sky, night story |
+| Frog pads (stand points) | 550, 805 · 440, 829 | lily pads, right half of the pond |
+| Squirrel run | x 884–1194 | on the branch top (`Scene.branchTopY`) |
+| Beehive | 1390 | 604–653 | hangs from the side branch, drip at 653 |
+| Swing pivot / seat | 990 | 459 / 558 | hangs from the main branch |
 
 Owl anchors are body centers — feet sit at `y + OWL_FEET·scale` (`owl.feetY()`).
 Bath spots are `Scene.pondShallow(x, scale)`: feet 12px inside the pond's near

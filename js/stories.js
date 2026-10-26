@@ -45,6 +45,30 @@ const S = {
     await S.wait(dur);
   },
 
+  bubble(x, y, text, dur = 1300) {
+    Audio.pop();
+    const layer = document.getElementById('fx');
+    const w = Math.max(64, text.length * 15 + 36);
+    const g = svgEl('g', { transform: `translate(${x} ${y})` }, layer);
+    svgEl('path', { d: 'M-9,20 L0,36 L11,20 Z', fill: '#fffdf5', stroke: '#e8d9b8', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }, g);
+    svgEl('rect', { x: -w / 2, y: -23, width: w, height: 46, rx: 23, fill: '#fffdf5', stroke: '#e8d9b8', 'stroke-width': 2.5 }, g);
+    const tx = svgEl('text', { x: 0, y: 9, 'text-anchor': 'middle', 'font-family': FONT, 'font-size': 25, 'font-weight': 800, fill: '#6b4a2a' }, g);
+    tx.textContent = text;
+    const born = performance.now();
+    pushFx({
+      g,
+      update: (dt, t) => {
+        const age = (performance.now() - born) / 1000;
+        const s = 1 + .14 * Math.sin(Math.min(age / .25, 1) * Math.PI);
+        const fade = age > (dur - 300) / 1000 ? clamp((dur / 1000 - age) / .3, 0, 1) : 1;
+        g.setAttribute('transform', `translate(${x} ${y}) scale(${s})`);
+        g.setAttribute('opacity', fade);
+        return age > dur / 1000;
+      },
+      kill: () => g.remove()
+    });
+  },
+
   async bounce(owl, n = 3, perMs = 480) {
     for (let i = 0; i < n; i++) {
       owl.hop(16);

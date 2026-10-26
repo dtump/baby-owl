@@ -47,6 +47,7 @@ const HEDGEHOG_FEET = 32; // local y of the hedgehog's ground contact (pre-scale
 const Scene = {
   clouds: [], birds: [], ripples: [], tufts: [], flowers: [], reeds: [],
   butterflies: [], leaves: [], sparkles: [], fireflies: [], stars: [],
+  shootingStars: [], starTimer: rand(12, 25), bees: [],
   parallax: { x: 0, y: 0 },
   leafTimer: 3,
   dayMs: 180000,
@@ -94,6 +95,22 @@ const Scene = {
   // World y of the hedgehog's ground contact when its group sits at (x, y).
   hedgehogGroundY(y) {
     return y + HEDGEHOG_FEET * HEDGEHOG_SCALE;
+  },
+
+  // Top edge of the main branch (the squirrel runs here; the swing hangs from it).
+  branchTopY(x) {
+    return 470 - 13 * Math.sin(Math.PI * clamp((x - 880) / 315, 0, 1));
+  },
+
+  // World position of the swing seat (follows the sway).
+  swingSeat() {
+    const s = this.swing;
+    const a = s.ang * Math.PI / 180;
+    const dx = s.seatX - s.pivot.x, dy = s.seatY - s.pivot.y;
+    return {
+      x: s.pivot.x + dx * Math.cos(a) - dy * Math.sin(a),
+      y: s.pivot.y + dx * Math.sin(a) + dy * Math.cos(a)
+    };
   },
 
   build() {
@@ -246,6 +263,23 @@ const Scene = {
     svgEl('circle', { cy: 2, r: 7.5, fill: '#4a2f1a' }, bh);
     svgEl('line', { x1: 0, y1: 9, x2: 0, y2: 17, stroke: '#5f3d22', 'stroke-width': 3.5, 'stroke-linecap': 'round' }, bh);
 
+    // beehive hanging from the side branch (bees + honey drips live in buildCritters)
+    const hive = svgEl('g', {}, tree);
+    this.hive = { g: hive, dripX: 1390, dripY: 653 };
+    svgEl('line', { x1: 1390, y1: 554, x2: 1390, y2: 600, stroke: '#8a5a33', 'stroke-width': 3.5 }, hive);
+    svgEl('ellipse', { cx: 1390, cy: 604, rx: 30, ry: 13, fill: '#d9a441', stroke: '#8a5a33', 'stroke-width': 2.5 }, hive);
+    svgEl('ellipse', { cx: 1390, cy: 622, rx: 38, ry: 16, fill: '#e0aa4e', stroke: '#8a5a33', 'stroke-width': 2.5 }, hive);
+    svgEl('ellipse', { cx: 1390, cy: 640, rx: 30, ry: 13, fill: '#d9a441', stroke: '#8a5a33', 'stroke-width': 2.5 }, hive);
+    svgEl('path', { d: 'M1354,616 Q1390,626 1426,616 M1358,634 Q1390,642 1422,634', stroke: '#8a5a33', 'stroke-width': 4, fill: 'none', opacity: .55, 'stroke-linecap': 'round' }, hive);
+    svgEl('circle', { cx: 1390, cy: 626, r: 6, fill: '#4a2f1a' }, hive);
+
+    // a tiny swing hanging from the main branch (Pip's daytime ride, main.js)
+    const sw = svgEl('g', {}, tree);
+    this.swing = { g: sw, pivot: { x: 990, y: 459 }, seatX: 990, seatY: 558, ang: 0, rideAmp: 0, rider: null };
+    svgEl('line', { x1: 968, y1: 459, x2: 968, y2: 555, stroke: '#8a5a33', 'stroke-width': 3.5 }, sw);
+    svgEl('line', { x1: 1012, y1: 459, x2: 1012, y2: 555, stroke: '#8a5a33', 'stroke-width': 3.5 }, sw);
+    svgEl('rect', { x: 960, y: 553, width: 60, height: 9, rx: 4, fill: '#b5793f', stroke: '#8a5a33', 'stroke-width': 2.5 }, sw);
+
     const canopy = svgEl('g', {}, tree);
     this.canopyG = canopy;
     this.foliage = { main: [], light: [], berries: [] };
@@ -271,6 +305,21 @@ const Scene = {
     this.blossomG = svgEl('g', { opacity: 0 }, canopy);
     for (let i = 0; i < 16; i++)
       svgEl('circle', { cx: rand(1100, 1430), cy: rand(160, 360), r: rand(4, 7), fill: Math.random() > .5 ? '#ffd1e8' : '#ffb7d5' }, this.blossomG);
+
+    // a squirrel running the branch (tree layer, so it passes BEHIND the owls)
+    const sq = svgEl('g', { transform: 'translate(1000 458)' }, tree);
+    const sqFlip = svgEl('g', {}, sq);
+    const sqB = svgEl('g', {}, sqFlip);
+    svgEl('path', { d: 'M-12,-12 C-36,-18 -44,-44 -28,-54 C-12,-62 0,-50 -4,-38 C-7,-28 -10,-18 -12,-12 Z', fill: '#a5673f', stroke: '#7a4a2e', 'stroke-width': 2.5 }, sqB);
+    svgEl('ellipse', { cx: 0, cy: -13, rx: 19, ry: 12, fill: '#c98d5a', stroke: '#8a5a33', 'stroke-width': 2.5 }, sqB);
+    svgEl('ellipse', { cx: 3, cy: -11, rx: 10, ry: 7, fill: '#e8c39a' }, sqB);
+    svgEl('circle', { cx: 17, cy: -23, r: 9.5, fill: '#c98d5a', stroke: '#8a5a33', 'stroke-width': 2.5 }, sqB);
+    svgEl('path', { d: 'M12,-30 L15,-40 L20,-31 Z', fill: '#c98d5a', stroke: '#8a5a33', 'stroke-width': 2, 'stroke-linejoin': 'round' }, sqB);
+    svgEl('circle', { cx: 20, cy: -25, r: 2, fill: '#2d1a0e' }, sqB);
+    svgEl('circle', { cx: 26, cy: -22, r: 1.6, fill: '#2d1a0e' }, sqB);
+    svgEl('ellipse', { cx: -8, cy: -3, rx: 5.5, ry: 3.5, fill: '#8a5a33' }, sqB);
+    svgEl('ellipse', { cx: 9, cy: -3, rx: 5.5, ry: 3.5, fill: '#8a5a33' }, sqB);
+    this.squirrel = { g: sq, flip: sqFlip, body: sqB, x: 1000, y: 458, dir: 1, sp: 55, chatting: false, chatT: 0, chatTimer: rand(10, 18), chatters: 0 };
   },
 
   buildFg() {
@@ -357,6 +406,44 @@ const Scene = {
     svgEl('circle', { cx: 48, cy: 1, r: 5, fill: '#4a2c17' }, hgb);
     this.hedgehog = { g: hg, flip, body: hgb, shadow: hgShadow, eyes: [hgE1, hgE2], shy: true };
     this.hedgehogDraw();
+
+    // a frog hopping between the pond's lily pads
+    const frog = svgEl('g', { transform: 'translate(550 805)' }, crit);
+    const frogFlip = svgEl('g', {}, frog);
+    const frogBody = svgEl('g', {}, frogFlip);
+    svgEl('ellipse', { cx: -16, cy: -4, rx: 9, ry: 5, fill: '#4f9d4f' }, frogBody);
+    svgEl('ellipse', { cx: 16, cy: -4, rx: 9, ry: 5, fill: '#4f9d4f' }, frogBody);
+    svgEl('ellipse', { cx: 0, cy: -14, rx: 24, ry: 15, fill: '#63b95c', stroke: '#3f7d3f', 'stroke-width': 2.5 }, frogBody);
+    svgEl('circle', { cx: -10, cy: -26, r: 8, fill: '#63b95c', stroke: '#3f7d3f', 'stroke-width': 2.5 }, frogBody);
+    svgEl('circle', { cx: 10, cy: -26, r: 8, fill: '#63b95c', stroke: '#3f7d3f', 'stroke-width': 2.5 }, frogBody);
+    svgEl('circle', { cx: -10, cy: -27, r: 4.5, fill: '#fffdf5' }, frogBody);
+    svgEl('circle', { cx: 10, cy: -27, r: 4.5, fill: '#fffdf5' }, frogBody);
+    const frogEyes = [
+      svgEl('circle', { cx: -10, cy: -27, r: 2.2, fill: '#2d1a0e' }, frogBody),
+      svgEl('circle', { cx: 10, cy: -27, r: 2.2, fill: '#2d1a0e' }, frogBody)
+    ];
+    svgEl('path', { d: 'M-8,-16 Q0,-11 8,-16', stroke: '#2f6b34', 'stroke-width': 2, fill: 'none', 'stroke-linecap': 'round' }, frogBody);
+    this.frog = {
+      g: frog, flip: frogFlip, body: frogBody, eyes: frogEyes,
+      pads: [[550, 805], [440, 829]], pad: 0,
+      x: 550, y: 805, hopping: false, hopT: 0, from: null, to: null, toPad: 0,
+      timer: rand(6, 14), croaks: 0, squashT: 0
+    };
+
+    // bees looping around the beehive
+    for (let i = 0; i < 4; i++) {
+      const g = svgEl('g', {}, crit);
+      const wl = svgEl('g', {}, g);
+      const wr = svgEl('g', {}, g);
+      svgEl('ellipse', { cx: -3, cy: -5, rx: 3.6, ry: 2.1, fill: '#ffffff', opacity: .8 }, wl);
+      svgEl('ellipse', { cx: 3, cy: -5, rx: 3.6, ry: 2.1, fill: '#ffffff', opacity: .8 }, wr);
+      svgEl('ellipse', { rx: 5.5, ry: 4, fill: '#ffd34d', stroke: '#8a5a33', 'stroke-width': 1.2 }, g);
+      svgEl('path', { d: 'M-1.5,-3.8 L-1.5,3.8 M1.5,-4 L1.5,4', stroke: '#8a5a33', 'stroke-width': 1.6 }, g);
+      svgEl('circle', { cx: 5.8, r: 1.8, fill: '#2d1a0e' }, g);
+      this.bees.push({ g, wl, wr, s: .8 + i * .13, hx: 1390, hy: 622, rx: rand(35, 75), ry: rand(16, 34), sp: rand(.5, 1.1), ph: rand(0, 6) });
+    }
+    this.dripTimer = rand(6, 11);
+    this.buzzTimer = rand(3.5, 7);
   },
 
   hedgehogDraw() {
@@ -507,7 +594,130 @@ const Scene = {
     return this.dayT >= .56 && this.dayT < .86;
   },
 
-  updateSky(t) {
+  honeyDrip() {
+    const dx = this.hive.dripX, dy = this.hive.dripY;
+    const d = svgEl('circle', { cx: dx, cy: dy, r: 0, fill: '#ffc233', stroke: '#e0a020', 'stroke-width': 1 }, document.getElementById('fx'));
+    const born = performance.now();
+    pushFx({
+      update: () => {
+        const age = (performance.now() - born) / 1000;
+        if (age < .35) {
+          d.setAttribute('r', (3 + age * 8).toFixed(1));
+          return false;
+        }
+        const p = clamp((age - .35) / .8, 0, 1);
+        d.setAttribute('cy', (dy + p * 70).toFixed(1));
+        d.setAttribute('opacity', (1 - p).toFixed(2));
+        return p >= 1;
+      },
+      kill: () => d.remove()
+    });
+  },
+
+  updateCritters(dt, t) {
+    // frog: hop between lily pads, croak on landing (daytime only)
+    const f = this.frog;
+    f.g.setAttribute('opacity', (1 - this.night).toFixed(2));
+    if (this.night < .5) {
+      if (f.squashT > 0) {
+        f.squashT -= dt;
+        const s = 1 - .2 * (f.squashT / .3);
+        f.body.setAttribute('transform', `translate(0 -14) scale(1 ${s.toFixed(2)}) translate(0 14)`);
+      } else {
+        f.body.setAttribute('transform', '');
+      }
+      if (f.hopping) {
+        f.hopT += dt / .7;
+        const p = Math.min(f.hopT, 1);
+        f.x = lerp(f.from.x, f.to.x, p);
+        f.y = lerp(f.from.y, f.to.y, p) - Math.sin(p * Math.PI) * 46;
+        f.flip.setAttribute('transform', f.to.x < f.from.x ? 'scale(-1 1)' : '');
+        if (p >= 1) {
+          f.hopping = false;
+          f.pad = f.toPad;
+          f.x = f.to.x;
+          f.y = f.to.y;
+          f.squashT = .3;
+          f.croaks++;
+          S.bubble(f.x, f.y - 44, 'ribbit!', 1100);
+          Audio.croak();
+        }
+      } else {
+        f.timer -= dt;
+        if (f.timer <= 0) {
+          f.timer = rand(7, 15);
+          const next = (f.pad + 1) % f.pads.length;
+          f.from = { x: f.x, y: f.y };
+          f.to = { x: f.pads[next][0], y: f.pads[next][1] };
+          f.toPad = next;
+          f.hopping = true;
+          f.hopT = 0;
+        }
+      }
+      f.g.setAttribute('transform', `translate(${f.x.toFixed(1)} ${f.y.toFixed(1)})`);
+    }
+
+    // squirrel: run the branch, stop to chatter at Pip (daytime only)
+    const q = this.squirrel;
+    q.g.setAttribute('opacity', (1 - this.night).toFixed(2));
+    if (this.night < .5) {
+      q.y = this.branchTopY(q.x);
+      if (q.chatting) {
+        q.chatT += dt;
+        if (q.chatT >= 1.4) {
+          q.chatting = false;
+          q.chatT = 0;
+        }
+      } else {
+        q.x += q.dir * q.sp * dt;
+        if (q.x > 1194) { q.x = 1194; q.dir = -1; }
+        if (q.x < 884) { q.x = 884; q.dir = 1; }
+        q.chatTimer -= dt;
+        const nearPip = Math.abs(q.x - 950);
+        if (q.chatTimer <= 0 && nearPip > 80 && nearPip < 130) {
+          q.chatting = true;
+          q.chatT = 0;
+          q.chatTimer = rand(15, 26);
+          q.chatters++;
+          S.bubble(q.x, q.y - 64, 'chitter!', 1200);
+          Audio.chatter();
+        }
+      }
+      const faceDir = q.chatting ? (q.x < 950 ? 1 : -1) : q.dir;
+      q.flip.setAttribute('transform', faceDir < 0 ? 'scale(-1 1)' : '');
+      q.g.setAttribute('transform', `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`);
+    }
+
+    // bees: loop the hive; buzz and drip honey (daytime only)
+    for (const b of this.bees) {
+      const a = t * b.sp + b.ph;
+      b.g.setAttribute('transform', `translate(${(b.hx + Math.cos(a) * b.rx).toFixed(1)} ${(b.hy + Math.sin(a) * b.ry * .6).toFixed(1)}) scale(${b.s})`);
+      b.g.setAttribute('opacity', (1 - this.night).toFixed(2));
+      const flap = Math.sin(t * 42 + b.ph) * 32;
+      b.wl.setAttribute('transform', `rotate(${flap.toFixed(1)})`);
+      b.wr.setAttribute('transform', `rotate(${(-flap).toFixed(1)})`);
+    }
+    if (this.night < .5) {
+      this.buzzTimer -= dt;
+      if (this.buzzTimer <= 0) {
+        this.buzzTimer = rand(3.5, 7);
+        Audio.buzz();
+      }
+      this.dripTimer -= dt;
+      if (this.dripTimer <= 0) {
+        this.dripTimer = rand(6, 11);
+        this.honeyDrip();
+      }
+    }
+
+    // swing sway (riders make it swing wider)
+    const sw = this.swing;
+    const target = Math.sin(t * 1.1) * (4 + sw.rideAmp * 8);
+    sw.ang += (target - sw.ang) * (1 - Math.exp(-dt * 3));
+    sw.g.setAttribute('transform', `rotate(${sw.ang.toFixed(2)} ${sw.pivot.x} ${sw.pivot.y})`);
+  },
+
+  updateSky(dt, t) {
     const pal = skyPalette(this.dayT);
     for (let i = 0; i < 3; i++) this.skyStops[i].setAttribute('stop-color', pal[i]);
     const sunT = clamp(((this.dayT - .88 + 1) % 1) / .67, 0, 1);
@@ -524,6 +734,32 @@ const Scene = {
       f.y = f.by + Math.sin(t * f.sp * 1.4 + f.ph * 2) * f.ry;
       f.g.setAttribute('transform', `translate(${f.x.toFixed(1)} ${f.y.toFixed(1)})`);
       f.g.setAttribute('opacity', (this.night * (.25 + .75 * Math.abs(Math.sin(t * 2.4 + f.ph)))).toFixed(2));
+    }
+    // occasional shooting star at night
+    this.starTimer -= dt;
+    if (this.night > .25 && this.starTimer <= 0 && this.shootingStars.length < 2) {
+      this.starTimer = rand(18, 40);
+      const x = rand(150, 1400), y = rand(40, 240);
+      const vx = (Math.random() < .5 ? -1 : 1) * rand(200, 320);
+      const vy = rand(90, 160);
+      const m = Math.hypot(vx, vy);
+      const g = svgEl('g', {}, this.starsG);
+      svgEl('line', { x1: 0, y1: 0, x2: (-vx / m * 55).toFixed(1), y2: (-vy / m * 55).toFixed(1), stroke: '#ffffff', 'stroke-width': 2.5, 'stroke-linecap': 'round' }, g);
+      svgEl('circle', { r: 2.6, fill: '#ffffff' }, g);
+      this.shootingStars.push({ g, x, y, vx, vy, life: 0, max: .9 });
+    }
+    for (let i = this.shootingStars.length - 1; i >= 0; i--) {
+      const s = this.shootingStars[i];
+      s.life += dt;
+      if (s.life >= s.max) {
+        s.g.remove();
+        this.shootingStars.splice(i, 1);
+        continue;
+      }
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.g.setAttribute('transform', `translate(${s.x.toFixed(1)} ${s.y.toFixed(1)})`);
+      s.g.setAttribute('opacity', (1 - s.life / s.max).toFixed(2));
     }
     const duskWarm = ramp01(this.dayT, .40, .52) * (1 - ramp01(this.dayT, .55, .65));
     this.tint.setAttribute('fill', mixHex('#ffb46d', '#141d3d', this.night));
@@ -626,9 +862,10 @@ const Scene = {
     if (this.dayT < prev) this.dayCount++;
     this.season = Math.floor(this.dayCount / this.seasonDays) % 4;
     this.night = ramp01(this.dayT, .48, .60) * (1 - ramp01(this.dayT, .82, .94));
-    this.updateSky(t);
+    this.updateSky(dt, t);
     this.updateWeather(dt, t);
     this.updateSeason(dt);
+    this.updateCritters(dt, t);
     this.parallax.x += ((this.parallax.tx || 0) - this.parallax.x) * k;
     this.parallax.y += ((this.parallax.ty || 0) - this.parallax.y) * k;
     this.cloudsG.setAttribute('transform', `translate(${this.parallax.x * 16} ${this.parallax.y * 7})`);

@@ -24,7 +24,7 @@ step, no assets, no network needed.
 |---|---|
 | `index.html` | SVG stage, gradient defs, UI overlay (buttons, hint), script tags |
 | `css/style.css` | Fullscreen stage, UI pill styling, cursor-idle behavior |
-| `js/scene.js` | Shared helpers (`svgEl`, `cubic`, easing, `mixHex`), background: sky, sun, moon, stars, clouds, hills, ground, tree, pond, grass details, butterflies, leaves, sparkles, fireflies, hedgehog, rain/snow/rainbow; atmosphere clock (day/night, weather, seasons) |
+| `js/scene.js` | Shared helpers (`svgEl`, `cubic`, easing, `mixHex`), background: sky, sun, moon, stars, clouds, hills, ground, tree, pond, grass details, butterflies, leaves, sparkles, fireflies, hedgehog, frog, bees, rain/snow/rainbow; atmosphere clock (day/night, weather, seasons); ambient critters + swing sway (`updateCritters`) |
 | `js/owls.js` | `Owl` class: body/wings/eyes/beak/feet built from SVG shapes; per-frame update (blink, gaze tracking, flap, hop, bob, sleepy lids); speech bubbles |
 | `js/stories.js` | Story context `S` (wait/skip, fly paths, splash, fish, zzz, hearts, berries, pebbles, constellations, notes) + the 8 stories as async scripts |
 | `js/main.js` | Boot, rAF loop, mouse/keyboard/click input, story scheduler (day rotation + once-per-night night story), WebAudio sound, fullscreen |
@@ -42,6 +42,16 @@ SVG layer order (bottom → top): `bg` → `mid` (pond, tree) → `fg` (grass de
 - **The hedgehog** — a shy little critter (`Scene.hedgehog`, scale 1.3 with a
   ground shadow) that waddles in along the pond's right shore during its story
   and hides the rest of the time.
+- **The frog** (`Scene.frog`) — hops between the pond's lily pads and croaks
+  "ribbit!" on landing (daytime).
+- **The squirrel** (`Scene.squirrel`) — runs back and forth along the branch
+  (tree layer, so it passes behind the owls) and stops to chatter at Pip.
+- **The bees** (`Scene.bees`) — loop around the beehive (`Scene.hive`) that
+  hangs from the tree's side branch; honey drips from it now and then.
+- **The swing** (`Scene.swing`) — hangs from the main branch and sways; every
+  so often in daytime idle, Pip flies over, rides it for a few swings, and
+  flies home (the swing ride lives in `main.js`: `updateSwing`/`swingRideGo`;
+  a story or nightfall aborts it via `abortSwing`).
 
 Owls are built from layered shapes (body, scalloped belly, ear tufts, facial discs,
 big amber-irised eyes with movable pupils, blush, beak, side wings, feet) so
@@ -83,7 +93,10 @@ once per night when the owls would otherwise sleep.
 
 Drifting clouds, rotating sun rays, birds, swaying grass/flowers/reeds, pond
 ripples, Lissajous-flying butterflies, occasional falling leaves, floating
-sparkles, random idle emotes (hops, wiggles, wing stretches, blinks).
+sparkles, random idle emotes (hops, wiggles, wing stretches, blinks), a frog
+hopping lily pads and croaking, a squirrel scampering the branch and chattering
+at Pip, bees looping around the beehive with honey drips, the swing swaying
+(and Pip riding it in daytime idle), and shooting stars at night.
 
 ## Geometry & alignment (single source of truth)
 
@@ -158,7 +171,9 @@ The world lives on a clock: one full day/night cycle every 3 minutes
 ## Sound (tiny, WebAudio, off by default)
 
 Hoot = two descending sine blips; splash = quick square+sine drop; bubble pop =
-short triangle blip; wing flap = soft low blip on flight start.
+short triangle blip; wing flap = soft low blip on flight start; frog croak =
+low sawtooth croak; bee buzz = quiet square wobble; squirrel chatter = rapid
+square ticks.
 
 ## Verification
 

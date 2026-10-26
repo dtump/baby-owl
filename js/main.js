@@ -45,6 +45,18 @@ const Audio = {
   },
   wing() {
     this.tone(220, 90, .14, 'sine', .035);
+  },
+  croak() {
+    this.tone(150, 90, .16, 'sawtooth', .05);
+    setTimeout(() => this.tone(120, 75, .22, 'sawtooth', .04), 90);
+  },
+  buzz() {
+    this.tone(240, 200, .1, 'square', .018);
+    setTimeout(() => this.tone(260, 220, .1, 'square', .018), 60);
+  },
+  chatter() {
+    for (let i = 0; i < 3; i++)
+      setTimeout(() => this.tone(700 + i * 60, 950 + i * 60, .05, 'square', .028), i * 70);
   }
 };
 
@@ -88,6 +100,7 @@ function updateRest(dt, t) {
   }
   if (storyActive) return;
   for (const o of allOwls) {
+    if (o.pinned) continue;
     const spot = HUDDLE_SPOTS[o.name];
     const tx = spot && huddling ? lerp(o.home.x, spot.x, Scene.huddle) : o.home.x;
     const ty = spot && huddling ? lerp(o.home.y, spot.y, Scene.huddle) : o.home.y;
@@ -109,6 +122,7 @@ function updateRest(dt, t) {
 
 async function runStory(i) {
   skipStory();
+  abortSwing();
   const token = ++storyToken;
   resetPoses();
   storyActive = true;
@@ -154,6 +168,96 @@ function playStory(i) {
   skipStory();
   clearTimeout(nextTimer);
   runStory(i);
+}
+
+// --- the swing: Pip learns to use it (a little daytime ride) ---
+let swingToken = 0;
+const swingRide = { active: false, timer: rand(28, 48) };
+
+function abortSwing() {
+  if (!swingRide.active && !Scene.swing.rider) return;
+  swingToken++;
+  swingRide.active = false;
+  Scene.swing.rider = null;
+  Scene.swing.rideAmp = 0;
+  pip.reset();
+}
+
+async function swingFly(owl, from, c1, c2, to, dur, aborted) {
+  Audio.wing();
+  owl.lockRot = true;
+  owl.flying = true;
+  owl.flap(15, 38);
+  owl.bobAmp = 5;
+  const t0 = performance.now();
+  for (;;) {
+    await S.wait(16);
+    if (aborted()) break;
+    const p = clamp((performance.now() - t0) / dur, 0, 1);
+    const pt = cubic(from, c1, c2, to(), easeIO(p));
+    const pt2 = cubic(from, c1, c2, to(), easeIO(clamp(p + .02, 0, 1)));
+    owl.x = pt.x;
+    owl.y = pt.y;
+    owl.rot = clamp((pt2.x - pt.x) * 1.2, -14, 14);
+    if (p >= 1) break;
+  }
+  owl.lockRot = false;
+  owl.flying = false;
+  owl.flap(0, 0);
+  owl.flapBase = 15;
+  owl.bobAmp = 2.5;
+  owl.rot = 0;
+}
+
+async function swingRideGo() {
+  const token = ++swingToken;
+  const aborted = () => token !== swingToken;
+  swingRide.active = true;
+  Scene.swing.rider = pip;
+  pip.pinned = true;
+  const prevCtrl = S.ctrl;
+  const myCtrl = { skipped: false };
+  S.ctrl = myCtrl;
+  try {
+    await swingFly(pip, POS.pip, { x: 940, y: 560 }, { x: 930, y: 515 }, () => Scene.swingSeat(), 1300, aborted);
+    if (aborted()) return;
+    Scene.swing.rideAmp = 1;
+    pip.lockRot = true;
+    pip.rot = 0;
+    pip.bobAmp = 4;
+    await S.wait(4200);
+    if (aborted()) return;
+    Scene.swing.rideAmp = 0;
+    const seat = Scene.swingSeat();
+    await swingFly(pip, seat, { x: 950, y: 520 }, { x: 990, y: 460 }, () => ({ x: POS.pip.x, y: POS.pip.y }), 1300, aborted);
+  } finally {
+    Scene.swing.rider = null;
+    Scene.swing.rideAmp = 0;
+    pip.pinned = false;
+    pip.lockRot = false;
+    pip.bobAmp = 2.5;
+    if (S.ctrl === myCtrl) S.ctrl = prevCtrl;
+    swingRide.active = false;
+    if (!aborted()) swingRide.timer = rand(30, 55);
+  }
+}
+
+function updateSwing(dt, t) {
+  const sw = Scene.swing;
+  if (sw.rider) {
+    const s = Scene.swingSeat();
+    sw.rider.x = s.x;
+    sw.rider.y = s.y - OWL_FEET * sw.rider.scale;
+    sw.rider.rot = 0;
+  }
+  if (storyActive || Scene.isNight()) {
+    if (swingRide.active || sw.rider) abortSwing();
+    return;
+  }
+  if (!swingRide.active) {
+    swingRide.timer -= dt;
+    if (swingRide.timer <= 0) swingRideGo().catch(() => {});
+  }
 }
 
 function toSvg(cx, cy) {
@@ -252,7 +356,7 @@ window.addEventListener('keydown', e => {
 });
 
 setInterval(() => {
-  if (storyActive || Scene.isNight() || Scene.huddle > .3 || Math.random() < .55) return;
+  if (storyActive || Scene.isNight() || Scene.huddle > .3 || swingRide.active || Math.random() < .55) return;
   const o = allOwls[Math.floor(Math.random() * allOwls.length)];
   const act = Math.random();
   if (act < .35) {
@@ -279,6 +383,7 @@ function frame(now) {
   const t = now / 1000;
   Scene.update(dt, t);
   updateRest(dt, t);
+  updateSwing(dt, t);
   for (const o of allOwls) o.update(dt, t);
   for (let i = fxItems.length - 1; i >= 0; i--) {
     const it = fxItems[i];

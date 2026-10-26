@@ -24,11 +24,11 @@
 - [ ] Shuffle story order; "story of the day" seeded by date.
 
 ## Critters & world
-- [ ] Frog in the pond that croaks (bubble "ribbit") and jumps between lily pads.
-- [ ] Squirrel that runs along the branch and chatters at Pip.
-- [ ] Beehive in the tree with bees looping around; honey drizzle.
-- [ ] Fireflies at dusk; shooting star occasionally.
-- [ ] A tiny swing hanging from the branch that Pip learns to use.
+- [x] Frog in the pond that croaks (bubble "ribbit") and jumps between lily pads.
+- [x] Squirrel that runs along the branch and chatters at Pip.
+- [x] Beehive in the tree with bees looping around; honey drizzle.
+- [x] Fireflies at dusk (already in the atmosphere work); shooting star occasionally.
+- [x] A tiny swing hanging from the branch that Pip learns to use (daytime idle ride).
 
 ## Sound & feel
 - [ ] Soft generative ambient music (WebAudio, pentatonic plucks) with mute.
