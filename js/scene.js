@@ -60,6 +60,29 @@ const Scene = {
   blossomOp: 0,
   foliage: { main: [], light: [], berries: [] },
 
+  // Single source of truth for world geometry. The pond is DRAWN from
+  // `Scene.pond` (buildMid), story spots are derived from it (stories.js),
+  // the smoke test reads it, and the G debug overlay draws it.
+  pond: { cx: 400, cy: 795, rx: 285, ry: 80 },
+  keepClear: [{ name: 'trunk', x0: 1150, y0: 640, x1: 1375, y1: 900 }],
+  debug: false,
+
+  pondEdgeY(x, near = true) {
+    const k = clamp(1 - ((x - this.pond.cx) / this.pond.rx) ** 2, 0, 1);
+    return this.pond.cy + (near ? 1 : -1) * this.pond.ry * Math.sqrt(k);
+  },
+
+  inPond(x, y) {
+    const p = this.pond;
+    return ((x - p.cx) / p.rx) ** 2 + ((y - p.cy) / p.ry) ** 2 <= 1;
+  },
+
+  // Anchor (body center) for an owl of `scale` standing in the shallows:
+  // its feet land `inset` px inside the pond's near edge at x.
+  pondShallow(x, scale, inset = 12) {
+    return { x, y: this.pondEdgeY(x) - inset - OWL_FEET * scale };
+  },
+
   build() {
     const bg = document.getElementById('bg');
     svgEl('rect', { x: 0, y: 0, width: 1600, height: 900, fill: 'url(#sky)' }, bg);
@@ -117,6 +140,7 @@ const Scene = {
     this.skyStops = [...document.querySelectorAll('#sky stop')];
     this.grassStops = [...document.querySelectorAll('#grass stop')];
     this.tint = document.getElementById('tint');
+    this.debugG = document.getElementById('debug');
 
     this.buildMid();
     this.buildFg();
@@ -157,11 +181,12 @@ const Scene = {
 
   buildMid() {
     const mid = document.getElementById('mid');
+    const P = this.pond;
 
-    const pond = svgEl('g', { transform: 'translate(400 795)' }, mid);
+    const pond = svgEl('g', { transform: `translate(${P.cx} ${P.cy})` }, mid);
     this.pondG = pond;
-    svgEl('ellipse', { rx: 285, ry: 80, fill: 'url(#pond)' }, pond);
-    svgEl('ellipse', { rx: 285, ry: 80, fill: 'none', stroke: '#2b8fb0', 'stroke-width': 4, opacity: .3 }, pond);
+    svgEl('ellipse', { rx: P.rx, ry: P.ry, fill: 'url(#pond)' }, pond);
+    svgEl('ellipse', { rx: P.rx, ry: P.ry, fill: 'none', stroke: '#2b8fb0', 'stroke-width': 4, opacity: .3 }, pond);
     svgEl('ellipse', { cx: -70, cy: -22, rx: 130, ry: 26, fill: '#d9f6ff', opacity: .45 }, pond);
     for (let i = 0; i < 3; i++) {
       const r = svgEl('ellipse', { rx: 40, ry: 12, fill: 'none', stroke: '#eafcff', 'stroke-width': 3, opacity: 0 }, pond);
@@ -350,6 +375,66 @@ const Scene = {
     this.hedgehog.g.setAttribute('transform', 'translate(-140 884)');
     this.hedgehogFlip(1);
     this.hedgehogPeek(true);
+  },
+
+  // --- debug overlay (G key): draws the geometry the smoke test enforces ---
+  toggleDebug(refs) {
+    this.debug = !this.debug;
+    if (this.debug) {
+      if (refs) this.debugRefs = refs;
+      this.drawDebug();
+    } else {
+      this.debugG.textContent = '';
+      this.debugOwlMarkers = [];
+    }
+  },
+
+  drawDebug() {
+    const g = this.debugG;
+    g.textContent = '';
+    this.debugOwlMarkers = [];
+    const P = this.pond;
+    const cross = (x, y, c, r = 7) => svgEl('path', {
+      d: `M${x - r},${y - r} L${x + r},${y + r} M${x - r},${y + r} L${x + r},${y - r}`,
+      stroke: c, 'stroke-width': 3, 'stroke-linecap': 'round', fill: 'none'
+    }, g);
+    const label = (x, y, txt, c = '#ffffff') => {
+      const t = svgEl('text', { x, y, 'font-size': 15, 'font-family': 'sans-serif', 'font-weight': 700, fill: c, stroke: '#1c3a2a', 'stroke-width': 3, 'paint-order': 'stroke' }, g);
+      t.textContent = txt;
+      return t;
+    };
+    svgEl('ellipse', { cx: P.cx, cy: P.cy, rx: P.rx, ry: P.ry, fill: 'none', stroke: '#ff5d5d', 'stroke-width': 2.5, 'stroke-dasharray': '10 8' }, g);
+    cross(P.cx, P.cy, '#ff5d5d');
+    label(P.cx + 10, P.cy - 10, 'pond', '#ffb3b3');
+    for (const z of this.keepClear) {
+      svgEl('rect', { x: z.x0, y: z.y0, width: z.x1 - z.x0, height: z.y1 - z.y0, fill: 'none', stroke: '#ff5d5d', 'stroke-width': 2, 'stroke-dasharray': '4 6', opacity: .8 }, g);
+      label(z.x0 + 8, z.y0 + 20, z.name, '#ffb3b3');
+    }
+    const pos = (this.debugRefs && this.debugRefs.pos) || {};
+    for (const k in pos) {
+      cross(pos[k].x, pos[k].y, '#ffd166');
+      label(pos[k].x + 9, pos[k].y - 9, k, '#ffe6a3');
+    }
+    for (const o of (this.debugRefs && this.debugRefs.owls) || []) {
+      const ay = o.y - o.hopY;
+      const a = cross(0, 0, '#7ec8ff');
+      a.setAttribute('data-owl', o.name);
+      a.setAttribute('transform', `translate(${o.x} ${ay})`);
+      const f = svgEl('circle', { r: 5, fill: '#7ec8ff', 'data-owl-feet': o.name, transform: `translate(${o.x} ${o.feetY()})` }, g);
+      const t = label(10, -10, o.name, '#bde3ff');
+      t.setAttribute('data-owl-label', o.name);
+      t.setAttribute('transform', `translate(${o.x} ${ay})`);
+      this.debugOwlMarkers.push({ o, a, f, t });
+    }
+  },
+
+  updateDebug() {
+    for (const m of this.debugOwlMarkers || []) {
+      const ay = m.o.y - m.o.hopY;
+      m.a.setAttribute('transform', `translate(${m.o.x} ${ay})`);
+      m.f.setAttribute('transform', `translate(${m.o.x} ${m.o.feetY()})`);
+      m.t.setAttribute('transform', `translate(${m.o.x} ${ay})`);
+    }
   },
 
   makeButterfly(b) {
@@ -617,5 +702,6 @@ const Scene = {
       s.g.setAttribute('cy', s.baseY + s.y);
       s.g.setAttribute('opacity', ((1 - this.night) * .55).toFixed(2));
     }
+    if (this.debug) this.updateDebug();
   }
 };

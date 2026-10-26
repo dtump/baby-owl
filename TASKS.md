@@ -21,6 +21,8 @@
 - [x] More stories: Lost & Found (Pip drops a shiny pebble, Puff finds it)
 - [x] More stories: Constellation Lesson (night story: stars form an owl, plays once per night)
 - [x] More stories: Band Practice (the owls hoot a little melody, pitch-aware hoots)
+- [x] Alignment tooling: single-source geometry (`Scene.pond` + `pondEdgeY`/`inPond`/`pondShallow`, `OWL_FEET` + `owl.feetY()`, `Scene.keepClear`), `G` debug overlay, smoke-test geometry contract
+- [x] Visual fix: bath owls stand IN the pond (feet 12px inside the near edge; spots derived via `Scene.pondShallow`, splashes at the feet)
 
 ## Story beats (as implemented)
 
@@ -69,11 +71,15 @@ skips.
 | Pond edge (Puff) | 655 | 708 | groundY 748 |
 | Fish water point | 505 | 786 | splash here |
 | Puff splash point | 545 | 782 | |
-| Pip bath (shallows) | 262 | 866 | pond's near edge |
-| Puff bath (shallows) | 348 | 878 | pond's near edge |
+| Pip bath (shallows) | 310 | 813 | derived: feet 12px inside the pond's near edge |
+| Puff bath (shallows) | 370 | 818 | derived: feet 12px inside the pond's near edge |
 | Hedgehog stop | 620 | 884 | shoreline, faces right |
 | Pip visit (greeting) | 520 | 874 | near hedgehog |
 | Pebble spot | 958 | 858 | grass, below branch |
 | Puff find (search) | 905 | 852 | left of pebble |
 | Puff give (branch) | 1005 | 421 | handoff to Pip |
 | Constellation center | 430 | 185 | sky, night story |
+
+Owl anchors are body centers — feet sit at `y + OWL_FEET·scale` (`owl.feetY()`).
+Bath spots are `Scene.pondShallow(x, scale)`: feet 12px inside the pond's near
+edge. The smoke test enforces the feet-based pond/keep-clear contract.

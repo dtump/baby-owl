@@ -32,3 +32,9 @@ Then work on the "More stories" items in your backlog
 ## 2026-10-23 — Prompt 4
 
 Is the "1/2/3 = story" expected now that we have 8 stories, or will it cycle through them?
+
+---
+
+## 2026-10-23 — Prompt 5
+
+The main issue we seem to hit is alignment of objects/owls. For example, in the bathing scene, the owl doesn't seem to be actually in the pond. Find a durable fix for this, so we don't keep running into this problem. After that, I feel we're ready to do the "Critters & World" part of the backlog

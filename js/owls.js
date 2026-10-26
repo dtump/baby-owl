@@ -1,5 +1,6 @@
 const OWL_BODY_RX = 58;
 const OWL_BODY_RY = 66;
+const OWL_FEET = 74; // local y of the feet/shadow line: the owl's ground contact
 
 class Owl {
   constructor(parent, opts) {
@@ -28,6 +29,7 @@ class Owl {
     this.hopTime = 0;
     this.hopDur = 0;
     this.hopH = 0;
+    this.hopY = 0;
     this.squash = 1;
     this.shadowOp = .14;
     this.pal = opts.pal;
@@ -40,7 +42,7 @@ class Owl {
     const g = svgEl('g', {}, parent);
     this.g = g;
 
-    this.shadow = svgEl('ellipse', { cx: 0, cy: 74, rx: 52, ry: 9, fill: '#1c3a2a', opacity: .14 }, g);
+    this.shadow = svgEl('ellipse', { cx: 0, cy: OWL_FEET, rx: 52, ry: 9, fill: '#1c3a2a', opacity: .14 }, g);
 
     const bob = svgEl('g', {}, g);
     this.bob = bob;
@@ -103,6 +105,11 @@ class Owl {
     this.hopTime = 0;
     this.hopDur = .5;
     this.hopH = h;
+  }
+
+  // World y of the feet (the owl's ground contact), hop included.
+  feetY() {
+    return this.y - this.hopY + OWL_FEET * this.scale;
   }
 
   flap(speed, amp) {

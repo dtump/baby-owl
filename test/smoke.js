@@ -35,13 +35,13 @@ async function main() {
     .join('\n;\n');
   window.eval(bundle + `
  ;window.__test = {
-   olive, pip, puff, Scene, stories, S, POS,
-   runStory, skipStory, playStory, tryStart,
-   get storyActive() { return storyActive; },
-   get storyNow() { return storyNow; },
-   get nextTimerSet() { return !!nextTimer; },
-   clearNext() { clearTimeout(nextTimer); }
- };`);
+    olive, pip, puff, Scene, stories, S, POS, OWL_FEET,
+    runStory, skipStory, playStory, tryStart,
+    get storyActive() { return storyActive; },
+    get storyNow() { return storyNow; },
+    get nextTimerSet() { return !!nextTimer; },
+    clearNext() { clearTimeout(nextTimer); }
+  };`);
   const T = window.__test;
   const { olive, pip, puff } = T;
 
@@ -81,17 +81,18 @@ async function main() {
   const hintText = document.getElementById('hint').textContent;
   assert(hintText.includes('1-8') && !hintText.includes('1/2/3'), 'hint shows the 1-8 story keys');
 
-  // --- no fg props in front of the trunk (x 1150-1375, y > 640) ---
+  // --- no fg props inside a keep-clear zone (Scene.keepClear) ---
   const trunkZone = [];
+  const inZone = (x, y) => T.Scene.keepClear.some(z => x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1);
   for (const g of document.querySelectorAll('#fg > g')) {
-    const m = (g.getAttribute('transform') || '').match(/translate\(([-\d.]+) ([\d.-]+)/);
-    if (m && +m[1] > 1150 && +m[1] < 1375 && +m[2] > 640) trunkZone.push('g@' + m[1] + ',' + m[2]);
+    const m = (g.getAttribute('transform') || '').match(/translate\(([-\d.]+) ([-\d.]+)/);
+    if (m && inZone(+m[1], +m[2])) trunkZone.push('g@' + m[1] + ',' + m[2]);
   }
   for (const e of document.querySelectorAll('#fg > ellipse')) {
     const x = +e.getAttribute('cx'), y = +e.getAttribute('cy');
-    if (x > 1150 && x < 1375 && y > 640) trunkZone.push('ellipse@' + x + ',' + y);
+    if (inZone(x, y)) trunkZone.push('ellipse@' + x + ',' + y);
   }
-  assert(trunkZone.length === 0, 'no grass/flowers/mushrooms in front of the trunk ' + JSON.stringify(trunkZone));
+  assert(trunkZone.length === 0, 'no grass/flowers/mushrooms inside a keep-clear zone ' + JSON.stringify(trunkZone));
 
   // --- hedgehog critter (hidden until its story) ---
   assert(!!T.Scene.hedgehog && T.Scene.hedgehog.g.parentNode === document.getElementById('critters'), 'hedgehog lives in the critters layer');
@@ -110,12 +111,69 @@ async function main() {
   });
   assert(!shroomOverlap, 'log does not sit on a mushroom');
 
-  // --- story landing spots stay out of the pond ---
-  const pondOut = p => ((p.x - 400) / 285) ** 2 + ((p.y - 795) / 80) ** 2 > 1;
-  assert(['pipBath', 'puffBath', 'pipVisit', 'puffFind', 'puffGive'].every(k => pondOut(T.POS[k])), 'story spots stay out of the pond');
+  // --- geometry: Scene.pond is the single source of truth ---
+  const pm = T.Scene.pondG.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)/);
+  const water = T.Scene.pondG.querySelector('ellipse');
+  assert(+pm[1] === T.Scene.pond.cx && +pm[2] === T.Scene.pond.cy, 'drawn pond sits at Scene.pond center');
+  assert(+water.getAttribute('rx') === T.Scene.pond.rx && +water.getAttribute('ry') === T.Scene.pond.ry, 'drawn pond matches Scene.pond size');
+  assert(T.Scene.inPond(400, 795) && !T.Scene.inPond(60, 60), 'Scene.inPond sanity');
+  assert(Math.abs(T.Scene.pondEdgeY(400) - 875) < .01 && Math.abs(T.Scene.pondEdgeY(400, false) - 715) < .01, 'pondEdgeY near/far edges at center');
+
+  // --- bath spots: the owls stand IN the shallows (feet in the water, near the edge) ---
+  for (const [key, owl] of [['pipBath', pip], ['puffBath', puff]]) {
+    const p = T.POS[key];
+    const fy = p.y + T.OWL_FEET * owl.scale;
+    const edge = T.Scene.pondEdgeY(p.x);
+    assert(T.Scene.inPond(p.x, p.y) && T.Scene.inPond(p.x, fy), key + ' anchor and feet are in the pond');
+    assert(edge - fy > 0 && edge - fy < 30, key + ' feet in the shallows (' + (edge - fy).toFixed(1) + 'px inside the near edge)');
+  }
+
+  // --- water spots are inside the pond, every other spot stays out ---
+  for (const k of ['fishPoint', 'puffSplash'])
+    assert(T.Scene.inPond(T.POS[k].x, T.POS[k].y), k + ' is a water spot inside the pond');
+  for (const k of Object.keys(T.POS)) {
+    if (['fishPoint', 'puffSplash', 'pipBath', 'puffBath'].includes(k)) continue;
+    assert(!T.Scene.inPond(T.POS[k].x, T.POS[k].y), k + ' stays out of the pond');
+  }
+
+  // --- owl spots on land: the FEET stay on dry ground ---
+  for (const [k, o] of [['olive', olive], ['land', olive], ['pondOlive', olive], ['pip', pip], ['pipVisit', pip], ['puff', puff], ['pondPuff', puff], ['puffFind', puff], ['puffGive', puff]]) {
+    const p = T.POS[k];
+    assert(!T.Scene.inPond(p.x, p.y + T.OWL_FEET * o.scale), k + ' feet stay out of the water');
+  }
+
+  // --- no story spot inside a keep-clear zone ---
+  for (const k of Object.keys(T.POS)) {
+    const p = T.POS[k];
+    const z = T.Scene.keepClear.find(z => p.x >= z.x0 && p.x <= z.x1 && p.y >= z.y0 && p.y <= z.y1);
+    assert(!z, k + ' is not in a keep-clear zone' + (z ? ' (' + z.name + ')' : ''));
+  }
 
   // Stop the boot story timer so it cannot race the tests.
   T.clearNext();
+
+  // --- debug overlay (G) ---
+  const debugLayer = document.getElementById('debug');
+  assert(!!debugLayer && debugLayer.getAttribute('pointer-events') === 'none', 'debug layer is click-through');
+  assert(debugLayer.children.length === 0, 'debug overlay starts hidden');
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'g' }));
+  assert(T.Scene.debug === true && debugLayer.children.length > 0, 'G shows the debug overlay');
+  const dLabels = [...debugLayer.querySelectorAll('text')].map(t => t.textContent);
+  assert(dLabels.includes('pond') && dLabels.includes('pipBath') && dLabels.includes('trunk'), 'overlay labels the pond, keep-clear zones and POS spots');
+  assert(dLabels.includes('Olive') && dLabels.includes('Puff'), 'overlay labels the owls');
+  const dm = debugLayer.querySelector('[data-owl="Olive"]');
+  const dfm = debugLayer.querySelector('[data-owl-feet="Olive"]');
+  const dy0 = +dm.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)/)[2];
+  const df0 = +dfm.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)/)[2];
+  olive.hop(22);
+  pump(8);
+  const dy1 = +dm.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)/)[2];
+  const df1 = +dfm.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)/)[2];
+  assert(dy1 < dy0 && df1 < df0, 'overlay tracks an owl while it hops');
+  assert(Math.abs(df1 - (dy1 + T.OWL_FEET * olive.scale)) < 1, 'overlay feet marker sits at the feet line');
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'G' }));
+  assert(T.Scene.debug === false && debugLayer.children.length === 0, 'G again hides the overlay');
+  pump(40);
 
   // --- hop moves the owl up ---
   olive.hop(22);
