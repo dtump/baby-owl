@@ -11,10 +11,10 @@ const POS = {
   puffSplash: { x: 545, y: 782 },
   pipBath: Scene.pondShallow(310, .62),
   puffBath: Scene.pondShallow(370, .60),
-  hedgehog: { x: 620, y: 884 },
-  pipVisit: { x: 520, y: 874 },
-  pebble: { x: 958, y: 858 },
-  puffFind: { x: 905, y: 852 },
+  hedgehog: { x: 760, y: 800 },
+  pipVisit: { x: 660, y: 792 },
+  pebble: { x: 958, y: 800 },
+  puffFind: { x: 900, y: 780 },
   puffGive: { x: 1005, y: 421 },
   skyOwl: { x: 430, y: 185 }
 };
@@ -597,7 +597,8 @@ const stories = [
     run: async (S, o) => {
       const { olive, pip, puff } = o;
       const hg = Scene.hedgehog;
-      Scene.hedgehogShow(-140, 884);
+      Scene.hedgehogShow(1760, POS.hedgehog.y);
+      Scene.hedgehogFlip(-1);
       for (const ow of [olive, pip, puff]) {
         ow.lookLock = true;
         ow.lookWorld = POS.hedgehog;
@@ -606,18 +607,18 @@ const stories = [
       await S.wait(400);
       await S.say(olive, 'Hello?', 1200);
       await S.flyPath(pip, POS.pip, { x: 760, y: 560 }, { x: 640, y: 720 }, POS.pipVisit, 1300);
-      pip.lookWorld = { x: 648, y: 860 };
+      pip.lookWorld = POS.hedgehog;
       await S.say(pip, 'Hi!', 1000);
       pip.hop(12);
       await S.wait(500);
       await S.say(pip, '…', 900);
       await S.say(puff, 'For you!', 1100);
-      const berry = await S.berryToss({ x: POS.puff.x, y: POS.puff.y - 40 }, { x: 648, y: 872 }, 900);
+      const berry = await S.berryToss({ x: POS.puff.x, y: POS.puff.y - 40 }, { x: POS.hedgehog.x - 45, y: POS.hedgehog.y + 30 }, 900);
       Scene.hedgehogPeek(false);
-      S.glint(648, 872, .9);
+      S.glint(POS.hedgehog.x - 45, POS.hedgehog.y + 30, .9);
       await S.wait(500);
       S.nom(berry);
-      S.heart(640, 850, .8);
+      S.heart(POS.hedgehog.x - 50, POS.hedgehog.y + 18, .8);
       await S.wait(400);
       await S.say(olive, 'Share nicely.', 1300);
       await S.slide(hg.g, POS.hedgehog.x, POS.hedgehog.y - 12, 180);
@@ -631,8 +632,8 @@ const stories = [
       puff.flapBase = 15;
       await S.say(pip, 'Bye!', 900);
       await S.say(puff, 'Bye!', 900);
-      Scene.hedgehogFlip(-1);
-      await S.slide(hg.g, -160, 884, 2200);
+      Scene.hedgehogFlip(1);
+      await S.slide(hg.g, 1780, POS.hedgehog.y, 2200);
       Scene.hedgehogHide();
       await S.flyPath(pip, POS.pipVisit, { x: 660, y: 700 }, { x: 800, y: 540 }, POS.pip, 1300);
       for (const ow of [olive, pip, puff]) {

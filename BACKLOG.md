@@ -37,6 +37,7 @@
 
 ## Tech
 - [x] Alignment tooling: single-source geometry (`Scene.pond`, `OWL_FEET`/`feetY`, `Scene.keepClear`), `G` debug overlay, smoke-test geometry contract; bath owls now stand in the shallows.
+- [x] Safe-area contract: `Scene.safeArea` + `Scene.uiZones` (hint pill), debug overlay shows both, smoke test keeps owl-spot feet + pebble/hedgehog ground visible; hedgehog fixed (barely visible + cut off — now bigger, shadowed, at the pond's right shore).
 - [ ] Touch support polish (tap = click, two-finger tap = fullscreen).
 - [ ] prefers-reduced-motion: slow everything down / static scene.
 - [ ] Pause when tab hidden (rAF does this naturally, but timers don't).
