@@ -35,7 +35,7 @@ async function main() {
     .join('\n;\n');
   window.eval(bundle + `
  ;window.__test = {
-    olive, pip, puff, Scene, stories, S, POS, OWL_FEET,
+    olive, pip, puff, Scene, stories, S, POS, OWL_FEET, HEDGEHOG_SCALE,
     runStory, skipStory, playStory, tryStart,
     get storyActive() { return storyActive; },
     get storyNow() { return storyNow; },
@@ -128,13 +128,11 @@ async function main() {
     assert(edge - fy > 0 && edge - fy < 30, key + ' feet in the shallows (' + (edge - fy).toFixed(1) + 'px inside the near edge)');
   }
 
-  // --- water spots are inside the pond, every other spot stays out ---
+  // --- water spots are inside the pond; props stay out (owls are feet-checked below) ---
   for (const k of ['fishPoint', 'puffSplash'])
     assert(T.Scene.inPond(T.POS[k].x, T.POS[k].y), k + ' is a water spot inside the pond');
-  for (const k of Object.keys(T.POS)) {
-    if (['fishPoint', 'puffSplash', 'pipBath', 'puffBath'].includes(k)) continue;
+  for (const k of ['hedgehog', 'pebble', 'skyOwl'])
     assert(!T.Scene.inPond(T.POS[k].x, T.POS[k].y), k + ' stays out of the pond');
-  }
 
   // --- owl spots on land: the FEET stay on dry ground ---
   for (const [k, o] of [['olive', olive], ['land', olive], ['pondOlive', olive], ['pip', pip], ['pipVisit', pip], ['puff', puff], ['pondPuff', puff], ['puffFind', puff], ['puffGive', puff]]) {
@@ -149,6 +147,29 @@ async function main() {
     assert(!z, k + ' is not in a keep-clear zone' + (z ? ' (' + z.name + ')' : ''));
   }
 
+  // --- story action stays inside the safe area and clear of the HTML UI ---
+  const inRect = (p, r) => p.x >= r.x0 && p.x <= r.x1 && p.y >= r.y0 && p.y <= r.y1;
+  const uiHit = p => T.Scene.uiZones.some(z => inRect(p, z));
+  for (const [k, o] of [['olive', olive], ['land', olive], ['pondOlive', olive], ['pip', pip], ['pipVisit', pip], ['puff', puff], ['pondPuff', puff], ['puffFind', puff], ['puffGive', puff], ['pipBath', pip], ['puffBath', puff]]) {
+    const p = T.POS[k];
+    const feet = { x: p.x, y: p.y + T.OWL_FEET * o.scale };
+    assert(inRect(feet, T.Scene.safeArea), k + ' feet inside the safe area');
+    assert(!uiHit(feet), k + ' feet clear of the UI zones');
+  }
+  for (const k of ['pebble', 'hedgehog']) {
+    const p = T.POS[k];
+    assert(inRect(p, T.Scene.safeArea), k + ' inside the safe area');
+    assert(!uiHit(p), k + ' clear of the UI zones');
+  }
+
+  // --- the hedgehog is fully visible: not cut off, not behind the hint pill ---
+  const hg = T.Scene.hedgehog;
+  const hgGround = { x: T.POS.hedgehog.x, y: T.Scene.hedgehogGroundY(T.POS.hedgehog.y) };
+  assert(hgGround.y <= 900, 'hedgehog feet inside the viewBox (not cut off at the bottom)');
+  assert(inRect(hgGround, T.Scene.safeArea) && !uiHit(hgGround), 'hedgehog stands in the safe area, clear of the hint');
+  assert(!!hg.shadow, 'hedgehog has a ground shadow');
+  assert(hg.flip.getAttribute('transform') === `scale(${T.HEDGEHOG_SCALE})`, 'hedgehog is scaled up for visibility');
+
   // Stop the boot story timer so it cannot race the tests.
   T.clearNext();
 
@@ -160,6 +181,7 @@ async function main() {
   assert(T.Scene.debug === true && debugLayer.children.length > 0, 'G shows the debug overlay');
   const dLabels = [...debugLayer.querySelectorAll('text')].map(t => t.textContent);
   assert(dLabels.includes('pond') && dLabels.includes('pipBath') && dLabels.includes('trunk'), 'overlay labels the pond, keep-clear zones and POS spots');
+  assert(dLabels.includes('safe area') && dLabels.includes('hint'), 'overlay labels the safe area and UI zones');
   assert(dLabels.includes('Olive') && dLabels.includes('Puff'), 'overlay labels the owls');
   const dm = debugLayer.querySelector('[data-owl="Olive"]');
   const dfm = debugLayer.querySelector('[data-owl-feet="Olive"]');

@@ -23,6 +23,7 @@
 - [x] More stories: Band Practice (the owls hoot a little melody, pitch-aware hoots)
 - [x] Alignment tooling: single-source geometry (`Scene.pond` + `pondEdgeY`/`inPond`/`pondShallow`, `OWL_FEET` + `owl.feetY()`, `Scene.keepClear`), `G` debug overlay, smoke-test geometry contract
 - [x] Visual fix: bath owls stand IN the pond (feet 12px inside the near edge; spots derived via `Scene.pondShallow`, splashes at the feet)
+- [x] Visual fix: hedgehog barely visible + cut off (sat at the bottom edge behind the hint pill); now bigger (scale 1.3) with a shadow, at the pond's right shore; `Scene.safeArea`/`Scene.uiZones` contract keeps story action visible (also moved Pip's visit, the pebble and Puff's search spots up)
 
 ## Story beats (as implemented)
 
@@ -73,13 +74,18 @@ skips.
 | Puff splash point | 545 | 782 | |
 | Pip bath (shallows) | 310 | 813 | derived: feet 12px inside the pond's near edge |
 | Puff bath (shallows) | 370 | 818 | derived: feet 12px inside the pond's near edge |
-| Hedgehog stop | 620 | 884 | shoreline, faces right |
-| Pip visit (greeting) | 520 | 874 | near hedgehog |
-| Pebble spot | 958 | 858 | grass, below branch |
-| Puff find (search) | 905 | 852 | left of pebble |
+| Hedgehog stop | 760 | 800 | pond's right shore, enters from the right |
+| Pip visit (greeting) | 660 | 792 | shore at pond's right edge, faces the hedgehog |
+| Pebble spot | 958 | 800 | grass, below branch |
+| Puff find (search) | 900 | 780 | left of pebble |
 | Puff give (branch) | 1005 | 421 | handoff to Pip |
 | Constellation center | 430 | 185 | sky, night story |
 
 Owl anchors are body centers — feet sit at `y + OWL_FEET·scale` (`owl.feetY()`).
 Bath spots are `Scene.pondShallow(x, scale)`: feet 12px inside the pond's near
 edge. The smoke test enforces the feet-based pond/keep-clear contract.
+
+Story action must stay inside `Scene.safeArea` (the viewBox minus the 16:10
+side crop) and clear of `Scene.uiZones` (the bottom hint pill) — the smoke test
+checks every owl spot's feet plus the pebble/hedgehog ground against both, so
+nothing is cut off or hidden behind the UI again.

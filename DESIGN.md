@@ -39,8 +39,9 @@ SVG layer order (bottom → top): `bg` → `mid` (pond, tree) → `fg` (grass de
 - **Olive** (parent, brown, scale 1.05) — perched on the big branch at (1120, 393).
 - **Pip** (baby, light tan, scale 0.62) — on the branch at (950, 419).
 - **Puff** (baby, soft grey-blue, scale 0.60) — on a red mushroom at (800, 682).
-- **The hedgehog** — a shy little critter (`Scene.hedgehog`) that waddles in
-  along the shoreline during its story and hides the rest of the time.
+- **The hedgehog** — a shy little critter (`Scene.hedgehog`, scale 1.3 with a
+  ground shadow) that waddles in along the pond's right shore during its story
+  and hides the rest of the time.
 
 Owls are built from layered shapes (body, scalloped belly, ear tufts, facial discs,
 big amber-irised eyes with movable pupils, blush, beak, side wings, feet) so
@@ -60,9 +61,9 @@ pupils track the mouse, the whole body bobs (breathing) and hops.
 4. **Bath Time** — the babies fly into the shallows at the pond's near edge
    (feet in the water) and splash about (hops + splashes at the feet) while
    Olive supervises from the branch.
-5. **The New Friend** — a shy hedgehog waddles in along the shoreline; Pip flies
-   down to greet it, Puff shares a berry, and everyone waves goodbye as it
-   waddles off (turning around first).
+5. **The New Friend** — a shy hedgehog waddles in along the pond's right shore;
+   Pip flies down to the water's edge to greet it, Puff shares a berry, and
+   everyone waves goodbye as it waddles off (turning around first).
 6. **Lost & Found** — Pip drops a shiny pebble from the branch (gravity fall,
    bounce, glint), Puff searches the grass, spots it, and returns it — Pip is
    delighted, Olive is proud.
@@ -100,14 +101,20 @@ and everything derives from it:
   its body **center**, so feet = `y + OWL_FEET * scale` — always validate the
   feet, not the anchor.
 - `Scene.keepClear` — zones props and story spots must avoid (the tree trunk).
+- `Scene.safeArea` — the region guaranteed visible on common screens (the
+  viewBox minus the 16:10 `slice` side crop), and `Scene.uiZones` — the HTML UI
+  zones to keep clear of (the bottom hint pill). Story action must stay inside
+  the safe area and out of the UI zones, or it is cut off / washed out.
 - `G` — debug overlay (topmost `debug` layer): the pond outline, keep-clear
-  zones, every `POS` spot, and the owls' rendered anchors + feet lines, labeled
-  and tracking the owls live.
+  zones, safe area + UI zones, every `POS` spot, and the owls' rendered anchors
+  + feet lines, labeled and tracking the owls live.
 
 The smoke test enforces the contract: the drawn pond matches `Scene.pond`; bath
 spots have anchor AND feet inside the pond with the feet within 30 px of the
 near edge (the shallows); every other story spot — and the feet of every owl
-spot on land — stays out of the pond; no `POS` spot sits in a keep-clear zone.
+spot on land — stays out of the pond; no `POS` spot sits in a keep-clear zone;
+every owl spot's feet plus the pebble/hedgehog ground stay inside the safe area
+and clear of the UI zones (nothing cut off at the bottom or behind the hint).
 
 ## Atmosphere (day/night, weather, seasons)
 

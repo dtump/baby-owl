@@ -41,6 +41,9 @@ function cubic(p0, c1, c2, p1, t) {
   };
 }
 
+const HEDGEHOG_SCALE = 1.3;
+const HEDGEHOG_FEET = 32; // local y of the hedgehog's ground contact (pre-scale)
+
 const Scene = {
   clouds: [], birds: [], ripples: [], tufts: [], flowers: [], reeds: [],
   butterflies: [], leaves: [], sparkles: [], fireflies: [], stars: [],
@@ -65,6 +68,11 @@ const Scene = {
   // the smoke test reads it, and the G debug overlay draws it.
   pond: { cx: 400, cy: 795, rx: 285, ry: 80 },
   keepClear: [{ name: 'trunk', x0: 1150, y0: 640, x1: 1375, y1: 900 }],
+  // Region guaranteed visible on common screens: the viewBox minus the 16:10
+  // side crop (`slice` keeps the full height on screens up to ~16:9 wide).
+  safeArea: { x0: 80, y0: 0, x1: 1520, y1: 900 },
+  // HTML UI zones (the bottom hint pill) that story action should avoid.
+  uiZones: [{ name: 'hint', x0: 450, y0: 850, x1: 1150, y1: 900 }],
   debug: false,
 
   pondEdgeY(x, near = true) {
@@ -81,6 +89,11 @@ const Scene = {
   // its feet land `inset` px inside the pond's near edge at x.
   pondShallow(x, scale, inset = 12) {
     return { x, y: this.pondEdgeY(x) - inset - OWL_FEET * scale };
+  },
+
+  // World y of the hedgehog's ground contact when its group sits at (x, y).
+  hedgehogGroundY(y) {
+    return y + HEDGEHOG_FEET * HEDGEHOG_SCALE;
   },
 
   build() {
@@ -330,8 +343,9 @@ const Scene = {
       this.fireflies.push({ g, bx: rand(80, 1520), by: rand(470, 820), rx: rand(50, 130), ry: rand(25, 60), sp: rand(.25, .6), ph: rand(0, 6), x: 0, y: 0 });
     }
 
-    const hg = svgEl('g', { transform: 'translate(-140 884)', opacity: 0 }, crit);
-    const flip = svgEl('g', {}, hg);
+    const hg = svgEl('g', { transform: 'translate(1780 800)', opacity: 0 }, crit);
+    const flip = svgEl('g', { transform: `scale(${HEDGEHOG_SCALE})` }, hg);
+    const hgShadow = svgEl('ellipse', { cx: 0, cy: HEDGEHOG_FEET, rx: 54, ry: 8, fill: '#1c3a2a', opacity: .14 }, flip);
     const hgb = svgEl('g', {}, flip);
     svgEl('ellipse', { cx: -18, cy: 27, rx: 9, ry: 5.5, fill: '#8a5a3a' }, hgb);
     svgEl('ellipse', { cx: 14, cy: 27, rx: 9, ry: 5.5, fill: '#8a5a3a' }, hgb);
@@ -341,7 +355,7 @@ const Scene = {
     const hgE1 = svgEl('circle', { cx: 24, cy: -2, r: 3.2, fill: '#2d1a0e' }, hgb);
     const hgE2 = svgEl('circle', { cx: 38, cy: -4, r: 3.2, fill: '#2d1a0e' }, hgb);
     svgEl('circle', { cx: 48, cy: 1, r: 5, fill: '#4a2c17' }, hgb);
-    this.hedgehog = { g: hg, flip, body: hgb, eyes: [hgE1, hgE2], shy: true };
+    this.hedgehog = { g: hg, flip, body: hgb, shadow: hgShadow, eyes: [hgE1, hgE2], shy: true };
     this.hedgehogDraw();
   },
 
@@ -367,12 +381,12 @@ const Scene = {
   },
 
   hedgehogFlip(dir) {
-    this.hedgehog.flip.setAttribute('transform', dir < 0 ? 'scale(-1 1)' : '');
+    this.hedgehog.flip.setAttribute('transform', dir < 0 ? `scale(${-HEDGEHOG_SCALE} ${HEDGEHOG_SCALE})` : `scale(${HEDGEHOG_SCALE})`);
   },
 
   hedgehogReset() {
     this.hedgehog.g.setAttribute('opacity', 0);
-    this.hedgehog.g.setAttribute('transform', 'translate(-140 884)');
+    this.hedgehog.g.setAttribute('transform', 'translate(1780 800)');
     this.hedgehogFlip(1);
     this.hedgehogPeek(true);
   },
@@ -409,6 +423,13 @@ const Scene = {
     for (const z of this.keepClear) {
       svgEl('rect', { x: z.x0, y: z.y0, width: z.x1 - z.x0, height: z.y1 - z.y0, fill: 'none', stroke: '#ff5d5d', 'stroke-width': 2, 'stroke-dasharray': '4 6', opacity: .8 }, g);
       label(z.x0 + 8, z.y0 + 20, z.name, '#ffb3b3');
+    }
+    const sa = this.safeArea;
+    svgEl('rect', { x: sa.x0, y: sa.y0, width: sa.x1 - sa.x0, height: sa.y1 - sa.y0, fill: 'none', stroke: '#7ec8ff', 'stroke-width': 2, 'stroke-dasharray': '14 10', opacity: .7 }, g);
+    label(sa.x0 + 8, sa.y0 + 20, 'safe area', '#bde3ff');
+    for (const z of this.uiZones) {
+      svgEl('rect', { x: z.x0, y: z.y0, width: z.x1 - z.x0, height: z.y1 - z.y0, fill: '#ffb347', 'fill-opacity': .12, stroke: '#ffb347', 'stroke-width': 2, 'stroke-dasharray': '6 6' }, g);
+      label(z.x0 + 8, z.y0 + 20, z.name, '#ffe0b3');
     }
     const pos = (this.debugRefs && this.debugRefs.pos) || {};
     for (const k in pos) {
