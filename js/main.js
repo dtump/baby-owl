@@ -246,6 +246,8 @@ window.addEventListener('keydown', e => {
     toggleFull();
   } else if (e.key === 'm' || e.key === 'M') {
     toggleSound();
+  } else if (e.key === 'g' || e.key === 'G') {
+    Scene.toggleDebug({ pos: POS, owls: allOwls });
   }
 });
 

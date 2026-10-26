@@ -31,7 +31,8 @@ step, no assets, no network needed.
 
 SVG layer order (bottom → top): `bg` → `mid` (pond, tree) → `fg` (grass details)
 → `owls` → `critters` → `fx` (bubbles, splashes, zzz, rain/snow, huddle leaf)
-→ `tint` (day/night overlay) → vignette. `critters`, `fx` and `tint` are click-through.
+→ `tint` (day/night overlay) → vignette → `debug` (G-key alignment overlay).
+`critters`, `fx`, `tint` and `debug` are click-through.
 
 ## The cast
 
@@ -56,8 +57,9 @@ pupils track the mouse, the whole body bobs (breathing) and hops.
    snack. Then Puff tries, gets a big splash and no fish, and Olive cheers anyway.
 3. **Nap Time** — Olive yawns and "tells a story", both babies' eyes droop, `z`
    floats up, a butterfly lands on Olive's head. Gentle wake-up stretch.
-4. **Bath Time** — the babies fly to the shallows at the pond's near edge and
-   splash about (hops + splashes) while Olive supervises from the branch.
+4. **Bath Time** — the babies fly into the shallows at the pond's near edge
+   (feet in the water) and splash about (hops + splashes at the feet) while
+   Olive supervises from the branch.
 5. **The New Friend** — a shy hedgehog waddles in along the shoreline; Pip flies
    down to greet it, Puff shares a berry, and everyone waves goodbye as it
    waddles off (turning around first).
@@ -81,6 +83,31 @@ once per night when the owls would otherwise sleep.
 Drifting clouds, rotating sun rays, birds, swaying grass/flowers/reeds, pond
 ripples, Lissajous-flying butterflies, occasional falling leaves, floating
 sparkles, random idle emotes (hops, wiggles, wing stretches, blinks).
+
+## Geometry & alignment (single source of truth)
+
+Alignment bugs — an owl "in" the pond that is really standing on the bank —
+come from duplicated magic numbers, so the geometry lives in exactly one place
+and everything derives from it:
+
+- `Scene.pond` — the pond ellipse (center (400, 795), rx 285, ry 80).
+  `buildMid` **draws** the pond from it; `Scene.pondEdgeY(x, near)` (edge y at
+  x), `Scene.inPond(x, y)` and `Scene.pondShallow(x, scale, inset)` (the
+  body-center anchor that puts an owl's feet `inset` px inside the near edge)
+  derive from it. Bath spots in `POS` are `Scene.pondShallow(...)` values.
+- `OWL_FEET` (owls.js) — the local y of an owl's feet/shadow line (74).
+  `owl.feetY()` is the world y of the ground contact. An owl's `POS` anchor is
+  its body **center**, so feet = `y + OWL_FEET * scale` — always validate the
+  feet, not the anchor.
+- `Scene.keepClear` — zones props and story spots must avoid (the tree trunk).
+- `G` — debug overlay (topmost `debug` layer): the pond outline, keep-clear
+  zones, every `POS` spot, and the owls' rendered anchors + feet lines, labeled
+  and tracking the owls live.
+
+The smoke test enforces the contract: the drawn pond matches `Scene.pond`; bath
+spots have anchor AND feet inside the pond with the feet within 30 px of the
+near edge (the shallows); every other story spot — and the feet of every owl
+spot on land — stays out of the pond; no `POS` spot sits in a keep-clear zone.
 
 ## Atmosphere (day/night, weather, seasons)
 
@@ -116,7 +143,8 @@ The world lives on a clock: one full day/night cycle every 3 minutes
 - **Click an owl** — hop + "Hoo!" bubble + heart.
 - **Click the pond** — splash + ripples.
 - **Click the background** — skip the current story.
-- **Keys** — `1`–`8` story, `Space` skip, `F` fullscreen, `M` sound.
+- **Keys** — `1`–`8` story, `Space` skip, `F` fullscreen, `M` sound,
+  `G` debug overlay (see "Geometry & alignment").
 - **Buttons** — sound toggle (WebAudio, default off), fullscreen.
 - Subtle mouse parallax on clouds and hills.
 

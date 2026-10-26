@@ -36,6 +36,7 @@
 - [ ] Slight screen "breathing" zoom (very slow scale 1.00→1.02) for coziness.
 
 ## Tech
+- [x] Alignment tooling: single-source geometry (`Scene.pond`, `OWL_FEET`/`feetY`, `Scene.keepClear`), `G` debug overlay, smoke-test geometry contract; bath owls now stand in the shallows.
 - [ ] Touch support polish (tap = click, two-finger tap = fullscreen).
 - [ ] prefers-reduced-motion: slow everything down / static scene.
 - [ ] Pause when tab hidden (rAF does this naturally, but timers don't).

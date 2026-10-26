@@ -19,6 +19,7 @@ No build step, no dependencies, no network requests — plain HTML, CSS and Java
 | `Space` | Skip the current story |
 | `F` | Toggle fullscreen |
 | `M` | Toggle sound (off by default) |
+| `G` | Toggle the debug overlay (pond outline, keep-clear zones, story spots, owl feet) |
 | Click an owl | Hoot + hearts |
 | Click the pond | Splash |
 | Click the background | Skip the current story |

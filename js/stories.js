@@ -9,8 +9,8 @@ const POS = {
   pondPuff: { x: 655, y: 708 },
   fishPoint: { x: 505, y: 786 },
   puffSplash: { x: 545, y: 782 },
-  pipBath: { x: 262, y: 866 },
-  puffBath: { x: 348, y: 878 },
+  pipBath: Scene.pondShallow(310, .62),
+  puffBath: Scene.pondShallow(370, .60),
   hedgehog: { x: 620, y: 884 },
   pipVisit: { x: 520, y: 874 },
   pebble: { x: 958, y: 858 },
@@ -569,19 +569,19 @@ const stories = [
       await S.flyPath(puff, POS.puff, { x: 700, y: 600 }, { x: 480, y: 740 }, POS.puffBath, 1300);
       olive.lookWorld = POS.puffBath;
       pip.hop(14);
-      S.splash(POS.pipBath.x, POS.pipBath.y + 4);
+      S.splash(POS.pipBath.x, pip.feetY());
       await S.say(pip, 'Whee!', 1100);
       await S.wait(300);
       puff.hop(16);
-      S.splash(POS.puffBath.x, POS.puffBath.y + 4, true);
+      S.splash(POS.puffBath.x, puff.feetY(), true);
       await S.say(puff, 'Again!', 1200);
       olive.lookWorld = POS.pipBath;
       await S.say(olive, 'Careful now!', 1400);
       await S.wait(250);
       pip.hop(14);
-      S.splash(POS.pipBath.x, POS.pipBath.y + 4);
+      S.splash(POS.pipBath.x, pip.feetY());
       puff.hop(14);
-      S.splash(POS.puffBath.x, POS.puffBath.y + 4);
+      S.splash(POS.puffBath.x, puff.feetY());
       await S.wait(600);
       await S.flyPath(pip, POS.pipBath, { x: 420, y: 700 }, { x: 780, y: 540 }, POS.pip, 1400);
       await S.flyPath(puff, POS.puffBath, { x: 500, y: 720 }, { x: 720, y: 580 }, POS.puff, 1300);
